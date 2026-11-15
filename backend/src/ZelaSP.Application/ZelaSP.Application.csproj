@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../ZelaSP.Domain/ZelaSP.Domain.csproj" />
+  </ItemGroup>
+</Project>
