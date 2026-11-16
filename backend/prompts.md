@@ -49,3 +49,53 @@ Resultado real: migração `20261114191732_InitialCreate` aplicada com sucesso, 
 Problema de diagnóstico: a primeira coleta JSON foi incompleta por leitura de um único bloco; somente o SELECT foi repetido com leitura completa dos blocos. Não houve falha nem repetição da migração ou reparo do banco. Evidências, comandos e limites da verificação constam na última seção de [VALIDACAO.md](VALIDACAO.md).
 
 Somente os três documentos autorizados (README, VALIDACAO e prompts) foram editados. Código, dependências e migrações preservados; nenhum outro banco de projeto ou configuração global foi alterado pelos comandos executados; nenhum dado de teste inserido e nenhum comando Git de alteração realizado. A identidade segue com privilégios amplos, sem modificação de permissões. A execução termina nesta etapa, aguardando revisão final do Product Manager.
+
+## TASK-002 — API REST de ocorrências — 15/11/2026
+
+Solicitação: implementar referências, cadastro, detalhe/listagem paginada e filtrada, PATCH de status transacional, histórico, DTOs, validação, erros e OpenAPI, preservando a arquitetura/InitialCreate e os 13 testes originais. Preparar teste de persistência SQL Server sem executá-lo ou gravar dados reais. Documentar contrato Mobile, evidências e pendências; somente backend/, sem operações Git de alteração.
+
+Decisões do PM/Arquiteto obtidas antes de editar: início ABERTA; somente ABERTA → EM_ANALISE → RESOLVIDA, sem saltos/repetições/reabertura, conflitos 409; executor técnico de configuração do servidor; origem APP controlada pelo servidor. As enumerações não foram interpretadas como autorização para inventar outras transições.
+
+Resultado produzido com assistência de IA (Codex): regra estática de domínio, DTOs e serviço de aplicação, contrato de persistência implementado com EF Core, três controllers, DI, tratamento de erros previsto/inesperado, JSON com enums textuais e campos extras rejeitados, OpenAPI com descrições/exemplos, contrato REST em docs/API_CONTRACT.md e procedimento em docs/SQLSERVER_INTEGRATION.md. O PATCH compara o estado anterior e mantém UPDATE/histórico em transação explícita, sem mudar o schema.
+
+Validação efetiva: restore corrigido sem supressão de auditoria; build sem erros/avisos; 52 testes aprovados (13 originais intactos e 39 novos casos de API/persistência SQLite), um teste SQL Server ignorado por autorização ausente; EF Core sem mudanças pendentes. Kestrel serviu OpenAPI 200 e rejeitou POST vazio com 400 antes de acessar banco. Modelagem, migração, snapshot e script SQL preservados. Evidência detalhada e inventário completo em VALIDACAO.md.
+
+Problemas resolvidos: dependência SQLite nativa transitiva vulnerável (fixado bundle 3.0.5 nos testes), nulabilidade de Headers do OpenAPI, parser SQLite incompatível com varbinary(max) (somente DDL da fixture adaptado para BLOB), EventLog indisponível no sandbox (somente logging de testes alterado) e comando EF executado inicialmente fora do diretório do manifesto (repetido corretamente em backend/). Falhas intermediárias foram registradas; o teste SQL Server ignorado não foi apresentado como aprovado.
+
+A revisão do documento OpenAPI em execução também detectou enums publicados inicialmente como inteiros e nulls indevidos nos schemas de requests. O transformer de schema e as opções JSON foram ajustados e os testes do contrato reforçados. Um erro intermediário de tipo Minimum/Maximum da biblioteca foi corrigido; build e os 52 testes executados passaram novamente após o ajuste.
+
+Dependências novas restritas a Tests: EF Core SQLite 10.0.6 e SQLitePCLRaw.bundle_e_sqlite3 3.0.5. Referência Infrastructure → Application adicionada para implementar o contrato da camada de aplicação; não há pacote de persistência em Application/Domain. Nenhum mock foi usado como prova de persistência.
+
+Limites: nenhuma conexão de dados ou escrita no SQL Server foi executada nesta TASK-002, nenhum teste real opt-in foi habilitado, nenhuma migração foi criada/aplicada e não houve seed/limpeza de dados. A prova específica SQL Server requer nova autorização após conferir o estado atual. SQLite comprova comportamento relacional local, não as particularidades do SQL Server. Sem autenticação de usuários, Cybersecurity completo, IA em runtime, Mobile, IoT ou TASK-003. Somente arquivos de backend/ foram alterados; nenhum comando Git de alteração. Entrega sujeita à revisão final do PM/Arquiteto.
+
+## TASK-002 — Execução autorizada de persistência/rollback SQL Server — 15/11/2026
+
+Autorização recebida: executar exclusivamente o teste existente `SqlServerWriteTests.PersistenciaHistoricoERollbackNoSqlServerSomenteAposAutorizacao`, em ZelaSP_Dev, criando um bairro, uma categoria, uma ocorrência e um histórico fictícios, além de tentar a resolução com falha injetada para verificar rollback. O PM autorizou expressamente manter os quatro registros; proibiu outras escritas, limpeza, migrações, concorrência simultânea e seed.
+
+Codex reinspecionou teste/interceptor, compilou sem erros/avisos e conferiu ausência de mudanças no modelo. `dotnet test ... --list-tests --filter 'FullyQualifiedName=ZelaSP.Tests.SqlServerWriteTests.PersistenciaHistoricoERollbackNoSqlServerSomenteAposAutorizacao'` listou somente esse teste. Antes da escrita, SELECTs confirmaram slayr\SQLEXPRESS, instância SQLEXPRESS, banco ZelaSP_Dev, NTLM, ONLINE, migração 20261114191732_InitialCreate / 10.0.6 e contagens zero nas quatro tabelas. Não houve divergências. O comando completo foi apresentado e autorizado individualmente para execução fora do sandbox.
+
+Comando real, em backend/, com a variável de autorização habilitada somente no processo e removida em finally:
+
+```powershell
+dotnet test ZelaSP.sln --no-build --no-restore --filter 'FullyQualifiedName=ZelaSP.Tests.SqlServerWriteTests.PersistenciaHistoricoERollbackNoSqlServerSomenteAposAutorizacao' --logger 'console;verbosity=detailed'
+```
+
+Resultado: uma única execução, um teste aprovado, zero falhas/ignorados. Não foi executada a suíte completa com escrita habilitada. Marcador exclusivo `TASK002-FICTICIO-3cd4154b671244f3a466b2803962a9c4`. IDs confirmados por leitura posterior: bairro=1, categoria=1, ocorrência=1, histórico=1. BAIRRO, CATEGORIA_OCORRENCIA, OCORRENCIA e HISTORICO_STATUS passaram individualmente de 0 para 1.
+
+Evidência real: ocorrência recuperada por outro DbContext; transição ABERTA → EM_ANALISE com histórico confirmado; tentativa EM_ANALISE → RESOLVIDA com falha injetada antes da gravação do histórico e descarte da transação sem commit. Outro DbContext e posterior conexão de leitura confirmaram EM_ANALISE, um histórico ABERTA → EM_ANALISE e nenhum histórico RESOLVIDA. As consultas posteriores de conteúdo foram parametrizadas e restritas ao marcador e suas referências; os demais acessos foram contagens agregadas, sem conteúdo pessoal.
+
+Não houve erro, repetição do teste, reparo, limpeza ou modificação de registros preexistentes. Nenhum comando direcionado a outro banco de projeto, migração, alteração global ou operação Git de alteração. Os quatro registros fictícios permanecem autorizadamente. Somente VALIDACAO.md e prompts.md foram editados; código, teste, dependências e InitialCreate preservados.
+
+Os resultados locais anteriores (52 casos) e esta execução SQL (um caso) ocorreram em rodadas separadas; não foram apresentados como uma suíte única executada nesta etapa. Persistência via serviços/EF e rollback foram verificados, sem teste HTTP real, concorrência simultânea ou simulação de falha de rede. Essas ampliações continuam fora do escopo. Entrega aguarda revisão final do Product Manager, sem autorização para commit ou TASK-003. Detalhes e evidências completos na última seção de VALIDACAO.md.
+
+## TASK-002 — Concorrência SQLite autorizada — 15/11/2026
+
+Solicitação: implementar e executar teste real de duas atualizações ABERTA → EM_ANALISE, com conexões/DbContexts SQLite independentes, ambas observando ABERTA antes de escrever, sincronização/timeout e prova de uma confirmação, um conflito e um histórico consistente. Não alterar produção sem diagnóstico prévio aprovado, não alterar contratos/entidades/migrações, não escrever no SQL Server, não realizar Git de alteração ou TASK-003.
+
+Resultado produzido com assistência de IA: somente o arquivo novo `tests/ZelaSP.Tests/OccurrenceConcurrencyTests.cs`, mais esta documentação e VALIDACAO.md. SQLite usa arquivo temporário próprio sob a saída de testes de backend/, WAL, cache privado, pooling desativado e dados fictícios locais. Uma barreira de cinco segundos aguarda duas leituras reais completamente materializadas; o decorator apenas sincroniza e delega todos os resultados e escritas ao store de produção, sem mocks ou conflito pré-programado. Duas Task.Run executam serviços reais independentes. Interceptor somente observa quantidades de linhas dos UPDATEs, que devem ser 1 e 0. Terceira conexão valida o estado confirmado e executor da operação vencedora. Timeouts e cancelamento limitam a espera; erros de locking não são aceitos como conflito esperado.
+
+Evidência: primeiro cenário isolado aprovado, A confirmou uma linha e B recebeu ConflitoEstadoException após zero linhas; ambas haviam lido ABERTA. Dez repetições adicionais aprovadas, com A vencedor em sete e B em três, sempre status final EM_ANALISE e exatamente um histórico ABERTA → EM_ANALISE. Restore passou sem dependências novas; build com zero erros/avisos; suíte completa com 53 aprovados, zero falhas e um SQL Server ignorado (54 descobertos). Os 52 casos locais anteriores, incluindo os 13 da TASK-001, continuam aprovados. EF Core confirmou modelo sem mudanças pendentes. Comandos e resultados completos em VALIDACAO.md.
+
+Limites: SQLite admite somente um escritor por vez; as operações da aplicação se sobrepõem, mas a escrita efetiva é serializada pelo banco. O teste verifica a comparação de estado e atomicidade reais nesse mecanismo, sem afirmar equivalência ao locking SQL Server. Recomenda-se prova específica futura nesse SGBD, com autorização própria; não foi implementada ou executada nesta etapa. Não se confundiu o teste SQL Server sequencial anterior com teste simultâneo.
+
+Nenhuma falha de produção foi identificada no cenário, e nenhum código de produção, dependência, contrato, entidade ou artefato de migração foi alterado. Somente arquivos temporários próprios foram removidos, sem limpar bin/obj. Nenhuma conexão de dados ou escrita SQL Server, nenhum acesso aos registros fictícios persistidos anteriormente, nenhuma operação Git de alteração ou arquivo fora de backend/. A entrega aguarda revisão do Product Manager, sem autorização para commit ou próxima tarefa.
