@@ -1,6 +1,6 @@
-# ZelaSP — Backend / TASK-001 e TASK-002
+# ZelaSP — Backend / TASK-001, TASK-002 e TASK-003
 
-API CitizenTech do ZelaSP (Global Solution FIAP 2026.2), compartilhada pelas disciplinas C# Software Development e SOA & Web Services. A TASK-001 estabeleceu o modelo e a persistência SQL Server; a TASK-002 implementa a API REST de ocorrências, sem antecipar upload, Mobile, IoT ou Cybersecurity.
+API CitizenTech do ZelaSP (Global Solution FIAP 2026.2), compartilhada pelas disciplinas C# Software Development e SOA & Web Services. A TASK-001 estabeleceu modelo/persistência SQL Server; a TASK-002 implementou ocorrências; a TASK-003 adiciona upload e recuperação de imagens. Mobile, IoT, autenticação e Cybersecurity permanecem em tarefas próprias.
 
 ## Tecnologias e ambiente
 
@@ -57,7 +57,25 @@ Leituras assíncronas usam AsNoTracking e DTOs. Ocorrências: criadaEm DESC/id D
 
 Status e histórico usam uma transação explícita EF Core. UPDATE compara status anterior para detectar concorrência (409); inserção do histórico e commit ocorrem na mesma transação. Exceção anterior ao commit causa rollback. Cadastro inicial não cria histórico de alteração. Nenhuma migração ou mudança de schema foi necessária.
 
-## Modelo de dados
+## Imagens — TASK-003
+
+| Método | Endpoint | Resposta |
+|---|---|---|
+| POST | `/api/imagens` | multipart/form-data; 201, metadados sem bytes e Location |
+| GET | `/api/imagens/{id}` | 200, metadados sem Dados; 404 se inexistente |
+| GET | `/api/imagens/{id}/conteudo` | 200, stream dos bytes originais, image/png ou image/jpeg |
+
+Enviar somente ocorrenciaId, titulo, executor e arquivo. O serviço valida ocorrência existente, título de 1–100 após trim, executor oficial exato, arquivo não vazio até 2 MiB (2.097.152 bytes) e correspondência de extensão/MIME/assinatura PNG ou JPEG. Dados inválidos retornam 400; ocorrência/imagem inexistente, 404; tamanho excedido, 413; falha interna, 500 genérico. Não há alteração de status/histórico durante upload. Os sete endpoints da TASK-002 foram preservados.
+
+O parser lê multipart de forma assíncrona e limitada, sem model binding de formulário ou arquivos temporários de upload. Corpo total limitado a 2 MiB + 64 KiB; campos de texto a 4096 bytes; limites de headers/boundary também explícitos. Arquivo sem Content-Length segue a mesma contagem efetiva. Nome é apenas metadado normalizado (basename Windows/POSIX, NFC, até 255 e caracteres seguros), nunca caminho. Bytes são inseridos na entidade existente e recuperados do banco; FileStreamResult usa MemoryStream somente para transporte, sem persistência local. Consultas usam AsNoTracking; metadados projetam tamanho sem expor bytes no JSON. Não foram adicionadas dependências.
+
+Configuração acadêmica única em `src/ZelaSP.Api/appsettings.json`, seção `Academico`: RM do líder `554787` e os quatro identificadores oficiais. `EquipeAcademica` valida a configuração no startup; ImagensService e OpenAPI consomem a mesma fonte. O cliente não escolhe RmLider e deve informar exatamente um Executor válido. Isso é identificação acadêmica, **não autenticação**. A configuração `Auditoria:Executor` da TASK-002 continua independente e inalterada; dados acadêmicos não são inseridos em logs próprios.
+
+Assinatura valida somente o formato esperado, sem decodificação completa, garantia de integridade, antivírus ou remoção de metadados. A memória é limitada por requisição/arquivo; não foi implementada quota global de uploads simultâneos. Detecção PII e demais proteções do módulo Cybersecurity não foram antecipadas. Contrato, exemplos multipart e identificação: [docs/API_CONTRACT.md](docs/API_CONTRACT.md).
+
+O modelo, entidades, relacionamentos, InitialCreate, designer e snapshot foram preservados, sem migração ou mudança de schema. A comprovação específica SQL Server de imagens foi concluída em execução única autorizada, com bytes e hashes confirmados; novas escritas exigem nova autorização: [docs/IMAGENS_SQLSERVER_INTEGRATION.md](docs/IMAGENS_SQLSERVER_INTEGRATION.md).
+
+## Modelo de dados existente
 
 | Principal | Dependente | Cardinalidade / FK obrigatória |
 |---|---|---|
@@ -130,7 +148,7 @@ $env:ASPNETCORE_ENVIRONMENT = 'Development'
 dotnet run --project src/ZelaSP.Api --no-build --no-restore --urls http://localhost:5187
 ```
 
-OpenAPI: `http://localhost:5187/openapi/v1.json`, apenas em Development, com sete operações, exemplos, parâmetros e erros. Não há interface Swagger UI ou endpoint na raiz. Erros usam Problem Details: 400/404/409 para casos previstos e 500 genérico, sem stack trace ou mensagem interna. A inicialização não aplica migrações nem grava dados/seeds.
+OpenAPI: `http://localhost:5187/openapi/v1.json`, apenas em Development, com dez operações (sete de ocorrências e três de imagens), exemplos, parâmetros e erros, incluindo multipart/binário. Não há interface Swagger UI ou endpoint na raiz. Erros usam Problem Details: 400/404/409 para casos previstos, 413 para upload excedido e 500 genérico, sem stack trace ou mensagem interna. A inicialização não aplica migrações nem grava dados/seeds.
 
 ## Migrações — artefatos e aplicação controlada
 
@@ -165,14 +183,16 @@ dotnet test ZelaSP.sln --no-restore --filter 'Category!=SqlServerWrite'
 
 Os 13 testes originais da TASK-001 foram preservados integralmente e inspecionam o modelo SQL Server sem abrir conexão. A TASK-002 adiciona 39 casos de API/persistência relacional em SQLite em memória, isolados por teste e sem mocks de persistência: T01–T13, filtros, limites, concorrência, AsNoTracking, UTC, erros e OpenAPI. Somente a fixture adapta varbinary(max) para BLOB no DDL temporário; isso não substitui a validação específica SQL Server.
 
-Resultado atual: **52 aprovados, zero falhas e um teste SQL Server ignorado por ausência de autorização** (53 descobertos). O teste real está implementado/compilado, mas não foi executado. Ver guardas de destino, dados fictícios e execução futura em [docs/SQLSERVER_INTEGRATION.md](docs/SQLSERVER_INTEGRATION.md). Nenhuma escrita SQL Server ocorreu na TASK-002.
+Resultado atual da TASK-003: **111 aprovados, zero falhas e um teste SQL Server ignorado por ausência de autorização** (112 descobertos). Inclui os 53 testes locais anteriores preservados e 58 novos casos de imagens, incluindo projeção SQL offline, SQLite relacional/HTTP sem mocks de persistência, limites, erros e OpenAPI. Fixtures PNG/JPEG são pixels magenta fictícios de 1×1, codificados em Base64 somente no código de testes; a persistência da API usa bytes reais, não Base64. Bibliotecas permanecem as mesmas.
 
-Resultados reais, falhas intermediárias e comandos estão em [VALIDACAO.md](VALIDACAO.md). O inventário completo está em [ARQUIVOS.md](ARQUIVOS.md); o uso de IA, em [prompts.md](prompts.md).
+O teste real sequencial de ocorrências/rollback da TASK-002 foi executado uma única vez sob autorização própria e passou, conforme VALIDACAO.md. Ele é ignorado nas execuções padrão atuais e não deve ser reexecutado automaticamente. A concorrência foi validada em SQLite. A TASK-003 teve uma execução única autorizada de imagens, exit code 0, com cinco registros fictícios mantidos e nenhum histórico novo. Procedimentos de novas escritas exigem autorização específica, sem reutilizar flags/autorização anteriores.
+
+Resultados reais, comandos e inventário de cada tarefa estão em [VALIDACAO.md](VALIDACAO.md). [ARQUIVOS.md](ARQUIVOS.md) contém o inventário histórico da TASK-001; o uso de IA está em [prompts.md](prompts.md).
 
 Correções do Tech Lead validadas em 14/11/2026: restore concluído, build com zero erros/avisos, 13 testes aprovados e nenhuma alteração pendente entre modelo e a única migração inicial. Os testes adicionais verificam título obrigatório com máximo de 100, cardinalidade 1 → 0..1, FK obrigatória e única, navegações e SQL gerado. Migração, designer, snapshot e script SQL foram atualizados sem aplicar a migração. Nenhuma dependência foi adicionada ou alterada.
 
-Após a aplicação, consultas de leitura confirmaram nove tabelas de domínio e `dbo.__EFMigrationsHistory`, com um registro `20261114191732_InitialCreate` / `10.0.6`; nove PKs de domínio, sete FKs obrigatórias com NO_ACTION, sete índices de FK (um único) e 14 CHECK constraints habilitadas e confiáveis. Tipos, tamanhos, precisão, nulabilidade, identidades, chaves e índices foram comparados com os artefatos aprovados sem divergências. O título é `nvarchar(100)` (200 bytes em `sys.columns`); os bytes da imagem usam `varbinary(max)`. Todas as nove tabelas de domínio permanecem sem registros. Restore, build com zero avisos/erros, os 13 testes e a conferência de mudanças pendentes passaram novamente após a migração.
+Na conferência histórica após aplicar InitialCreate, consultas de leitura confirmaram nove tabelas de domínio e `dbo.__EFMigrationsHistory`, com um registro `20261114191732_InitialCreate` / `10.0.6`; nove PKs de domínio, sete FKs NO_ACTION, sete índices de FK (um único) e 14 CHECKs habilitadas/confiáveis. Tipos/tamanhos e modelo estavam coerentes. O título usa nvarchar(100); bytes de imagem, varbinary(max). As tabelas estavam vazias naquela ocasião; posteriormente, a prova autorizada da TASK-002 manteve quatro registros fictícios. Esses resultados históricos não são inspeção atual do SQL Server, cuja evidência posterior de imagens está registrada em VALIDACAO.md.
 
-Pendente na TASK-002: revisão final pelo PM/Arquiteto e autorização/prova de persistência, histórico e rollback no SQL Server. A evidência SQL da TASK-001 cobre o schema, não os novos fluxos com dados. A identidade Windows tem privilégios amplos; testes reais de escrita exigem autorização específica e conferência do destino/dados atuais. Referências vazias dependem de provisionamento autorizado, sem seed automático. Mobile deve seguir o contrato e tratar 409 consultando novamente. Cybersecurity será integrado em tarefa própria. Não há upload, autenticação de usuários, detector PII, taint analysis, LLM, dashboard, hardware, telas Mobile, ML ou infraestrutura Linux.
+Pendente na TASK-003: revisão final do encerramento e autorização do PM para commit. A prova real de persistência de imagens foi concluída. A identidade Windows tem privilégios amplos; novas escritas exigem autorização específica e conferência do destino/dados atuais. Mobile deve seguir o contrato multipart e buscar conteúdo separadamente dos metadados. Não há autenticação, detector PII, taint analysis, LLM, dashboard, hardware, telas Mobile, ML ou infraestrutura Linux nesta entrega. Não iniciar TASK-004 automaticamente.
 
 Referências técnicas consultadas: [Fluent API e CHECK constraints](https://learn.microsoft.com/ef/core/modeling/indexes/), [exclusões e cascatas](https://learn.microsoft.com/en-us/ef/core/saving/cascade-delete), [migrações EF Core](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/managing), [correção OpenAPI](https://github.com/advisories/GHSA-v5pm-xwqc-g5wc) e [correção Pkcs](https://github.com/advisories/GHSA-846f-f764-76mx).

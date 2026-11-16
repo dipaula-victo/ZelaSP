@@ -8,6 +8,8 @@ public sealed class ApiExceptionHandler(IProblemDetailsService problemDetails) :
     {
         var status = exception switch
         {
+            ConteudoMuitoGrandeException => StatusCodes.Status413PayloadTooLarge,
+            BadHttpRequestException { StatusCode: StatusCodes.Status413PayloadTooLarge } => StatusCodes.Status413PayloadTooLarge,
             ValidacaoAplicacaoException => StatusCodes.Status400BadRequest,
             RecursoNaoEncontradoException => StatusCodes.Status404NotFound,
             ConflitoEstadoException => StatusCodes.Status409Conflict,
@@ -18,7 +20,12 @@ public sealed class ApiExceptionHandler(IProblemDetailsService problemDetails) :
             ? new HttpValidationProblemDetails(validation.Erros)
             : new ProblemDetails();
         details.Status = status;
-        details.Title = status == 500 ? "Erro interno ao processar a solicitação." : exception.Message;
+        details.Title = status switch
+        {
+            500 => "Erro interno ao processar a solicitação.",
+            413 => "O arquivo ou corpo da requisição excede o limite permitido.",
+            _ => exception.Message
+        };
         await problemDetails.WriteAsync(new ProblemDetailsContext
         {
             HttpContext = context,
