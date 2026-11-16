@@ -19,6 +19,7 @@ builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer<ContratoOpenApiTransformer>();
     options.AddSchemaTransformer<ContratoOpenApiTransformer>();
+    options.AddDocumentTransformer<ImagensOpenApiTransformer>();
 });
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
@@ -29,6 +30,9 @@ builder.Services.AddInfrastructure(connection);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(new IdentidadeAuditoria(builder.Configuration["Auditoria:Executor"] ?? ""));
 builder.Services.AddScoped<OcorrenciasService>();
+builder.Services.AddSingleton(new EquipeAcademica(builder.Configuration["Academico:RmLider"] ?? "",
+    builder.Configuration.GetSection("Academico:Executores").Get<string[]>() ?? []));
+builder.Services.AddScoped<ImagensService>();
 var app = builder.Build();
 app.UseExceptionHandler();
 app.UseStatusCodePages();

@@ -8,6 +8,7 @@ public static class DependencyInjection
     {
         services.AddDbContext<ZelaSpDbContext>(options => options.UseSqlServer(connectionString));
         services.AddScoped<IOcorrenciasStore, OcorrenciasStore>();
+        services.AddScoped<IImagensStore, ImagensStore>();
         return services;
     }
 }
