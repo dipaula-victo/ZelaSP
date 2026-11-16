@@ -1,6 +1,6 @@
-# ZelaSP — Backend / TASK-001
+# ZelaSP — Backend / TASK-001 e TASK-002
 
-Fundação da API CitizenTech do ZelaSP (Global Solution FIAP 2026.2), compartilhada pelas disciplinas C# Software Development e SOA & Web Services. Esta entrega contém o modelo de persistência e a configuração HTTP; os casos de uso serão implementados em tarefas posteriores.
+API CitizenTech do ZelaSP (Global Solution FIAP 2026.2), compartilhada pelas disciplinas C# Software Development e SOA & Web Services. A TASK-001 estabeleceu o modelo e a persistência SQL Server; a TASK-002 implementa a API REST de ocorrências, sem antecipar upload, Mobile, IoT ou Cybersecurity.
 
 ## Tecnologias e ambiente
 
@@ -9,8 +9,9 @@ Fundação da API CitizenTech do ZelaSP (Global Solution FIAP 2026.2), compartil
 - Microsoft.AspNetCore.OpenApi 10.0.6: documento OpenAPI nativo, sem dependência de interface Swagger UI.
 - Microsoft.OpenApi 2.7.5 e System.Security.Cryptography.Pkcs 9.0.21 fixados para corrigir vulnerabilidades das dependências transitivas identificadas no restore.
 - Testes: Microsoft.NET.Test.Sdk 17.14.1, xUnit 2.9.3, runner Visual Studio 3.1.4 e Microsoft.AspNetCore.Mvc.Testing 10.0.6.
+- Somente nos testes: Microsoft.EntityFrameworkCore.Sqlite 10.0.6 e SQLitePCLRaw.bundle_e_sqlite3 3.0.5. O bundle substitui a dependência nativa transitiva vulnerável identificada na restauração, sem suprimir avisos. Nenhum pacote novo no runtime de produção.
 
-Requer SDK .NET 10 e acesso ao NuGet para restaurar os pacotes. Validação realizada no Windows com SDK 10.0.202 e runtime 10.0.6. SQL Server só é necessário para persistência real e aplicação da migração. Nenhum teste desta entrega abre conexão com o banco.
+Requer SDK .NET 10 e acesso ao NuGet para restaurar os pacotes. Validação no Windows com SDK 10.0.202 e runtime 10.0.6. Endpoints com dados requerem SQL Server; a suíte padrão usa SQLite temporário e não acessa SQL Server. O teste de escrita SQL Server é opt-in e permanece ignorado sem autorização específica.
 
 ## Organização e referências
 
@@ -27,13 +28,34 @@ backend/
 ├── Migrations/InitialCreate.sql
 ├── src/
 │   ├── ZelaSP.Api/              # configuração HTTP, DI, erros e OpenAPI
-│   ├── ZelaSP.Application/      # ponto inicial para futuros serviços
+│   ├── ZelaSP.Application/      # DTOs, validações, casos de uso e contrato de persistência
 │   ├── ZelaSP.Domain/           # nove entidades e duas enumerações
 │   └── ZelaSP.Infrastructure/   # DbContext, Fluent API e migrações
-└── tests/ZelaSP.Tests/          # testes de domínio, modelo e host HTTP
+├── docs/                       # contrato Mobile e procedimento SQL Server
+└── tests/ZelaSP.Tests/          # modelo, HTTP/SQLite e SQL Server opt-in
 ```
 
-Referências: Api → Application e Infrastructure; Infrastructure → Domain; Application → Domain; Tests → Api (demais referências transitivas). Domain não depende de EF Core ou ASP.NET. Application contém apenas um marcador de assembly, pois não há casos de uso nesta tarefa. Não foram criados repositórios genéricos ou serviços sem utilização.
+Referências: Api → Application e Infrastructure; Infrastructure → Application e Domain; Application → Domain; Tests → Api (demais referências transitivas). Domain não depende de EF Core ou ASP.NET. `OcorrenciasService` valida e orquestra os casos de uso; `IOcorrenciasStore` contém somente operações concretas necessárias, implementadas com EF Core em Infrastructure. Controllers tratam HTTP, sem regras de transição. Não há repositório genérico ou dependência de EF Core em Application.
+
+## API REST — TASK-002
+
+| Método | Endpoint | Resultado |
+|---|---|---|
+| GET | `/api/bairros` | Referências por nome/id |
+| GET | `/api/categorias-ocorrencia` | Referências por nome/id |
+| POST | `/api/ocorrencias` | 201, DTO e Location |
+| GET | `/api/ocorrencias` | Página e filtros bairroId/categoriaId/status |
+| GET | `/api/ocorrencias/{id}` | Detalhe ou 404 |
+| PATCH | `/api/ocorrencias/{id}/status` | Alteração transacional e histórico |
+| GET | `/api/ocorrencias/{id}/historico` | Histórico cronológico ou 404 |
+
+Contrato completo: [docs/API_CONTRACT.md](docs/API_CONTRACT.md). POST recebe somente bairroId, categoriaId e descricao (1–4000, não apenas espaços), validando referências. Servidor define ABERTA, APP, data UTC e ID. PATCH recebe somente status textual; números e campos extras são rejeitados.
+
+Regras aprovadas pelo PM/Arquiteto: **ABERTA → EM_ANALISE → RESOLVIDA**, sem repetição, salto ou reabertura (409). `Auditoria:Executor` fornece identificador técnico do servidor, padrão `zelasp-api`, obrigatório com até 120 caracteres, substituível por `Auditoria__Executor`. Não há autenticação de usuários; executor não é recebido do cliente.
+
+Leituras assíncronas usam AsNoTracking e DTOs. Ocorrências: criadaEm DESC/id DESC; pagina mínima 1; tamanhoPagina 1–100, padrão 20; offset que exceda int32 retorna 400. Histórico: alteradoEm ASC/id ASC. Datas UTC com Z. Não há snapshot de paginação entre requisições.
+
+Status e histórico usam uma transação explícita EF Core. UPDATE compara status anterior para detectar concorrência (409); inserção do histórico e commit ocorrem na mesma transação. Exceção anterior ao commit causa rollback. Cadastro inicial não cria histórico de alteração. Nenhuma migração ou mudança de schema foi necessária.
 
 ## Modelo de dados
 
@@ -108,7 +130,7 @@ $env:ASPNETCORE_ENVIRONMENT = 'Development'
 dotnet run --project src/ZelaSP.Api --no-build --no-restore --urls http://localhost:5187
 ```
 
-Documento OpenAPI: `http://localhost:5187/openapi/v1.json`, apenas em Development. Não há interface Swagger UI nesta entrega. A rota raiz e rotas de negócio ainda retornam 404, com Problem Details. Controllers e DI estão preparados para os próximos endpoints. Exceções não tratadas recebem HTTP 500 padronizado sem mensagem interna no corpo. O handler usa operação assíncrona e os testes HTTP usam `async/await`; o DbContext oferece as operações assíncronas do EF Core para os futuros serviços. A inicialização não aplica migrações nem verifica conexão com SQL Server.
+OpenAPI: `http://localhost:5187/openapi/v1.json`, apenas em Development, com sete operações, exemplos, parâmetros e erros. Não há interface Swagger UI ou endpoint na raiz. Erros usam Problem Details: 400/404/409 para casos previstos e 500 genérico, sem stack trace ou mensagem interna. A inicialização não aplica migrações nem grava dados/seeds.
 
 ## Migrações — artefatos e aplicação controlada
 
@@ -138,10 +160,12 @@ A migração EF contém `Down` gerado pelo framework para reversão, mas ele nã
 ## Testes, limites e revisão
 
 ```powershell
-dotnet test ZelaSP.sln --no-restore
+dotnet test ZelaSP.sln --no-restore --filter 'Category!=SqlServerWrite'
 ```
 
-Os testes usam o modelo SQL Server real e o host ASP.NET em memória, sem providers alternativos e sem chamadas de conexão, `EnsureCreated`, `Migrate` ou `SaveChanges`. Cobrem nove entidades, sete FKs e seus destinos, exclusões, imagem opcional, tipos físicos, enumerações, limites numéricos, snapshot/migração, SQL gerado, DI, OpenAPI e respostas 404. A inicialização com Kestrel também foi verificada separadamente.
+Os 13 testes originais da TASK-001 foram preservados integralmente e inspecionam o modelo SQL Server sem abrir conexão. A TASK-002 adiciona 39 casos de API/persistência relacional em SQLite em memória, isolados por teste e sem mocks de persistência: T01–T13, filtros, limites, concorrência, AsNoTracking, UTC, erros e OpenAPI. Somente a fixture adapta varbinary(max) para BLOB no DDL temporário; isso não substitui a validação específica SQL Server.
+
+Resultado atual: **52 aprovados, zero falhas e um teste SQL Server ignorado por ausência de autorização** (53 descobertos). O teste real está implementado/compilado, mas não foi executado. Ver guardas de destino, dados fictícios e execução futura em [docs/SQLSERVER_INTEGRATION.md](docs/SQLSERVER_INTEGRATION.md). Nenhuma escrita SQL Server ocorreu na TASK-002.
 
 Resultados reais, falhas intermediárias e comandos estão em [VALIDACAO.md](VALIDACAO.md). O inventário completo está em [ARQUIVOS.md](ARQUIVOS.md); o uso de IA, em [prompts.md](prompts.md).
 
@@ -149,6 +173,6 @@ Correções do Tech Lead validadas em 14/11/2026: restore concluído, build com 
 
 Após a aplicação, consultas de leitura confirmaram nove tabelas de domínio e `dbo.__EFMigrationsHistory`, com um registro `20261114191732_InitialCreate` / `10.0.6`; nove PKs de domínio, sete FKs obrigatórias com NO_ACTION, sete índices de FK (um único) e 14 CHECK constraints habilitadas e confiáveis. Tipos, tamanhos, precisão, nulabilidade, identidades, chaves e índices foram comparados com os artefatos aprovados sem divergências. O título é `nvarchar(100)` (200 bytes em `sys.columns`); os bytes da imagem usam `varbinary(max)`. Todas as nove tabelas de domínio permanecem sem registros. Restore, build com zero avisos/erros, os 13 testes e a conferência de mudanças pendentes passaram novamente após a migração.
 
-Pendente: revisão final por PM/PO. Conexão integrada, aplicação do schema e metadados SQL foram validados; inserções de domínio e fluxos de negócio não foram executados nesta etapa. A identidade Windows utilizada tem privilégios amplos, portanto futuras escritas exigem nova autorização e conferência do destino efetivo. Não há endpoints de negócio, upload, transações de status, autenticação de usuários da API, detector PII, taint analysis, LLM, dashboard, hardware, mobile, ML ou infraestrutura Linux.
+Pendente na TASK-002: revisão final pelo PM/Arquiteto e autorização/prova de persistência, histórico e rollback no SQL Server. A evidência SQL da TASK-001 cobre o schema, não os novos fluxos com dados. A identidade Windows tem privilégios amplos; testes reais de escrita exigem autorização específica e conferência do destino/dados atuais. Referências vazias dependem de provisionamento autorizado, sem seed automático. Mobile deve seguir o contrato e tratar 409 consultando novamente. Cybersecurity será integrado em tarefa própria. Não há upload, autenticação de usuários, detector PII, taint analysis, LLM, dashboard, hardware, telas Mobile, ML ou infraestrutura Linux.
 
 Referências técnicas consultadas: [Fluent API e CHECK constraints](https://learn.microsoft.com/ef/core/modeling/indexes/), [exclusões e cascatas](https://learn.microsoft.com/en-us/ef/core/saving/cascade-delete), [migrações EF Core](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/managing), [correção OpenAPI](https://github.com/advisories/GHSA-v5pm-xwqc-g5wc) e [correção Pkcs](https://github.com/advisories/GHSA-846f-f764-76mx).
