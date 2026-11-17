@@ -1,0 +1,56 @@
+{
+  "name": "zelasp-mobile",
+  "version": "1.2.0",
+  "description": "ZelaSP: zeladoria no Jabaquara e Risco Cidadão",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "export:web": "expo export --platform web",
+    "test:web": "node tests/web-smoke.mjs",
+    "format": "prettier --write app src tests"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
+    "@react-native-community/netinfo": "12.0.1",
+    "expo": "~58.0.25",
+    "expo-constants": "~58.0.16",
+    "expo-crypto": "~58.0.8",
+    "expo-file-system": "~58.0.13",
+    "expo-font": "~58.0.12",
+    "expo-image-picker": "~58.0.10",
+    "expo-linking": "~58.0.17",
+    "expo-router": "~58.0.31",
+    "expo-sqlite": "~58.0.17",
+    "expo-status-bar": "~58.0.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-safe-area-context": "~5.11.1",
+    "react-native-screens": "~4.30.1",
+    "react-native-web": "^0.21.4"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "prettier": "^3.10.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "@babel/core": "7.29.13",
+    "@babel/plugin-transform-typescript": "7.29.9",
+    "@babel/plugin-transform-react-jsx": "7.29.7",
+    "@babel/plugin-transform-modules-commonjs": "7.29.14"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}
