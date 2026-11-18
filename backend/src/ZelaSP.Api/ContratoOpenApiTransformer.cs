@@ -33,6 +33,14 @@ public sealed class ContratoOpenApiTransformer : IOpenApiDocumentTransformer, IO
                 Type = JsonSchemaType.String,
                 Enum = Enum.GetNames<StatusOcorrencia>().Select(x => (JsonNode)JsonValue.Create(x)!).ToList()
             };
+        if (type == typeof(RegistrarLeituraRequest) && schema.Properties is { } leitura)
+        {
+            schema.AdditionalPropertiesAllowed = false;
+            schema.Required = new HashSet<string> { "dispositivoId", "nivelPercentual" };
+            leitura["dispositivoId"] = new OpenApiSchema { Type = JsonSchemaType.Integer, Format = "int32", Minimum = "1", Maximum = "2147483647" };
+            leitura["nivelPercentual"] = new OpenApiSchema { Type = JsonSchemaType.Number, Minimum = "0", Maximum = "100", MultipleOf = 0.01m,
+                Description = "Até duas casas decimais efetivas; zeros finais não aumentam a precisão. Sem strings ou arredondamento." };
+        }
         return Task.CompletedTask;
     }
 
@@ -46,6 +54,8 @@ public sealed class ContratoOpenApiTransformer : IOpenApiDocumentTransformer, IO
         {
             var contract = (path, method.ToString().ToUpperInvariant()) switch
             {
+                ("/api/dispositivos", "GET") => (operation.Summary ?? "Dispositivos", operation.Description ?? "Dispositivos e última leitura.", """[{"id":7,"bairroId":2,"nome":"Dispositivo fictício","local":"Ponto de demonstração","ultimaLeitura":{"id":31,"nivelPercentual":95.25,"lidaEm":"2026-11-18T12:00:00.000Z","nivelCritico":true}}]""", (string?)null),
+                ("/api/leituras", "POST") => (operation.Summary ?? "Registrar leitura", operation.Description ?? "JSON de até 1024 bytes.", """{"id":31,"dispositivoId":7,"nivelPercentual":95.25,"lidaEm":"2026-11-18T12:00:00.000Z","nivelCritico":true}""", """{"dispositivoId":7,"nivelPercentual":95.25}"""),
                 ("/api/risco-cidadao", "GET") => (operation.Summary ?? "Risco Cidadão", operation.Description ?? "Indicador global em sete dias UTC.", """{"pontuacao":0,"nivel":"BAIXO","periodoDias":7,"deteccoes":{"cpf":0,"telefone":0,"email":0,"senha":0,"saude":0},"vazamentosBloqueados":0,"alertas":[],"janela":{"inicioUtc":"2026-11-10T12:00:00Z","fimUtc":"2026-11-17T12:00:00Z"},"explicacao":{"texto":"Nenhum evento reconhecido foi registrado na janela. O indicador não representa perigo no bairro.","origem":"FALLBACK"}}""", (string?)null),
                 ("/api/bairros", "GET") => ("Listar bairros", "Ordenação por nome e id; retorna [] quando vazio.", "[{\"id\":1,\"nome\":\"Bairro fictício\",\"subprefeitura\":\"Subprefeitura fictícia\"}]", (string?)null),
                 ("/api/categorias-ocorrencia", "GET") => ("Listar categorias", "Ordenação por nome e id; retorna [] quando vazio.", "[{\"id\":1,\"nome\":\"Descarte irregular\"}]", null),
@@ -71,13 +81,16 @@ public sealed class ContratoOpenApiTransformer : IOpenApiDocumentTransformer, IO
                 {
                     "200" or "201" => contract.Item3,
                     "400" => "{\"title\":\"Um ou mais campos são inválidos.\",\"status\":400,\"errors\":{\"campo\":[\"Valor inválido.\"]}}",
+                    "404" when path == "/api/leituras" => "{\"title\":\"Dispositivo não encontrado.\",\"status\":404}",
                     "404" => "{\"title\":\"Ocorrência não encontrada.\",\"status\":404}",
                     "409" => "{\"title\":\"Transição de status não permitida.\",\"status\":409}",
+                    "413" => "{\"title\":\"O arquivo ou corpo da requisição excede o limite permitido.\",\"status\":413}",
+                    "415" => "{\"title\":\"Unsupported Media Type\",\"status\":415}",
                     _ => "{\"title\":\"Erro interno ao processar a solicitação.\",\"status\":500}"
                 };
                 if (response.Content is { } content)
                     foreach (var media in content.Values) media.Example = JsonNode.Parse(example);
-                if (code == "201" && response is OpenApiResponse created)
+                if (code == "201" && path == "/api/ocorrencias" && response is OpenApiResponse created)
                 {
                     created.Headers ??= new Dictionary<string, IOpenApiHeader>();
                     created.Headers["Location"] = new OpenApiHeader

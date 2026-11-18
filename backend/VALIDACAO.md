@@ -1,6 +1,6 @@
-# Evidências de validação — TASK-001 a TASK-005
+# Evidências de validação — TASK-001 a TASK-006
 
-**Estado atual (17/11/2026): TASK-005 implementada para Code Review; 253 testes locais aprovados, um SQL Server ignorado, build sem erros/avisos e EF sem diferenças pendentes.** Ver a última seção. Nenhum acesso SQL Server nesta task. As seções anteriores registram etapas históricas, inclusive as provas reais autorizadas das TASKs 002/003; essas autorizações não foram reutilizadas.
+**Estado atual (18/11/2026): TASK-006 implementada para Code Review; 317 testes locais aprovados, um SQL Server ignorado, build sem erros/avisos e EF sem diferenças pendentes.** Ver a última seção. Nenhum acesso SQL Server nesta task. As seções anteriores registram etapas históricas, inclusive as provas reais autorizadas das TASKs 002/003; essas autorizações não foram reutilizadas.
 
 Execução em 14/11/2026, Windows, SDK 10.0.202, runtime 10.0.6. Nenhuma conexão ou escrita SQL executada. Todos os arquivos do projeto criados somente em `backend/`. Os caches globais de ferramentas/pacotes do SDK foram utilizados com permissão do ambiente; não são alterações no conteúdo do monorepo.
 
@@ -911,3 +911,96 @@ Total 19 arquivos, todos backend/, sem exclusões. Nenhum arquivo de projeto/pac
 Integração HTTP implementada; testes usam exclusivamente HttpMessageHandler simulado. **Nenhuma chamada real à OpenAI ou acesso SQL Server foi executado**. Habilitação remota com credencial real depende de nova autorização e revisão de configuração/termos do provedor. Não se apresenta simulação como prova de integração remota aceita. Não existe gravação em MENSAGEM_RISCO ou produtor de bloqueios. Nenhuma funcionalidade IoT ou TASK-006 iniciada.
 
 Análise source/transform/sink, barreiras e riscos residuais em docs/TAINT_ANALYSIS.md. O detector de saída é heurístico e não valida toda semântica/PII inventada pelo modelo; a IA não altera o resultado autoritativo. Indicador é global sem autenticação, não mede perigo no bairro. Sem índice temporal, cache ou rate limit de inferências: volume/custo deverão ser avaliados antes de habilitação ampla. Mobile precisa de tarefa própria para exibir a nova explicação. Aguarda Code Review do PM/Arquiteto antes de commit.
+
+## TASK-006 — Dispositivos e leituras de preenchimento — 18/11/2026
+
+### Autorização e inspeção
+
+Branch confirmada feature/task-006-iot-sensors, working tree inicialmente limpo. Proposta aprovada pelo PM: GET /api/dispositivos, POST /api/leituras, nível crítico >= 90.00m, data do servidor, sem ocorrências automáticas, autenticação ou idempotência. Inspecionados Domain, DbContext, InitialCreate, snapshot, serviços/stores, DTOs, erros, OpenAPI e documentação. Mobile possui identificação da origem SENSOR em ocorrências, mas não consumidor/tela de telemetria; nenhum arquivo Mobile foi alterado.
+
+Schema existente reutilizado: DISPOSITIVO com bairro obrigatório/nome/local; LEITURA_SENSOR com FK obrigatória, decimal(5,2), CHECK inclusivo 0–100 e datetime2(3). Nenhuma entidade existente, DbContext, migração, snapshot, DDL ou índice foi alterado.
+
+### Implementação
+
+RegraNivelCritico no Domain é função pura `nivelPercentual >= 90.00m`. IoTService valida ID, percentual e precisão, confere existência e gera UTC via TimeProvider. Submilissegundos do relógio são truncados antes do SaveChanges para compatibilidade com datetime2(3); não se arredonda o percentual. Data significa recebimento/registro no backend, não medição física do ESP32.
+
+GET usa AsNoTracking e uma projeção escalar com left join sobre subconsulta do último ID. Ordenação nome ASC/id ASC; leitura por lidaEm DESC/id DESC. Sem dispositivo: []; sem leitura: null. Uma consulta, sem N+1, sem entidades/navegações no JSON. Regra crítica aplicada ao DTO derivado, sem coluna nova ou dependência da IA.
+
+POST JSON obrigatório com dispositivoId e nivelPercentual retorna 201 sem Location inventado. Cada POST válido insere uma leitura; não cria dispositivo nem altera outro registro. Campos extras/controlados/duplicados, tipos inválidos, strings numéricas, null, limites inválidos e precisão excessiva retornam 400; dispositivo ausente 404, corpo excessivo 413, Content-Type incompatível 415 e falha inesperada 500. Erros Problem Details e filtros de logging anteriores preservados; não há payload logging.
+
+Filtro específico da action lê no máximo 1025 bytes para aceitar até 1024, inclusive sem Content-Length, antes do model binding. Verifica JSON e nomes duplicados sem distinção de caixa. A precisão numérica original, incluindo expoente e zeros finais, é conferida antes de decimal para evitar perda de dígitos da desserialização. O serviço também valida decimal antes da persistência. Exemplos: 90.0000 e 1e2 são válidos; 89.999, 90.001 e 0.90001e2 não são arredondados/gravados. Controles de ID/data/classificação são exclusivamente do servidor.
+
+### Comandos e resultados reais
+
+Na raiz:
+
+```powershell
+git branch --show-current
+git status --short
+dotnet build backend/ZelaSP.sln --no-restore
+dotnet test backend/ZelaSP.sln --no-build --no-restore --filter 'FullyQualifiedName~IoT'
+dotnet test backend/tests/ZelaSP.Tests --no-restore --filter 'FullyQualifiedName~IoT'
+dotnet test backend/tests/ZelaSP.Tests --no-restore --filter 'FullyQualifiedName~IoTApiTests.PayloadInvalidoRetorna400SemGravarOuEcoar'
+dotnet test backend/ZelaSP.sln --no-build --no-restore
+```
+
+A variável ZELASP_SQLSERVER_TASK002_WRITE_AUTHORIZATION foi conferida ausente e nunca habilitada. Nenhum teste SQL Server com escrita executado; nenhum acesso ao SQL Server ou OpenAI nesta tarefa.
+
+Resultados intermediários registrados com precisão:
+
+1. Primeiros 56 casos novos: 45 aprovados, 11 falhas. Causa: a fixture SQLite existente gerava nivel_percentual como TEXT; CHECK 0–100 comparava como texto e rejeitava percentuais numéricos válidos. Ajustado somente o DDL temporário dessa coluna para NUMERIC, mantendo a CHECK ativa. A adaptação BLOB anterior permaneceu. Modelo de produção não alterado. Os 56 passaram após esse ajuste.
+2. Acrescentadas provas de preservação das oito outras tabelas, CHECK numérica, falha de persistência e tradução SQL offline: 61 aprovados.
+3. Acrescentados três casos de precisão; dois revelaram aceitação indevida de números com dezenas de dígitos após conversão decimal (89.999... e 90.000...001). Corrigida a inspeção do token original antes do model binding. Nenhum teste foi relaxado para aceitar arredondamento.
+4. Houve um build intermediário com CS0029 por atribuir string a MultipleOf no schema OpenAPI. Corrigido para decimal 0.01m, conforme o tipo real da biblioteca instalada; sem pacote novo. Os 64 casos IoT passaram depois.
+
+**Validação final:** build exit 0, zero avisos e zero erros; suíte completa exit 0, **317 aprovados, zero falhas, um SQL Server ignorado, 318 totais**. Os 253 testes anteriores continuam passando. Nenhuma assertion anterior foi removida/alterada. A única modificação em suporte anterior é a afinidade NUMERIC da coluna temporária SQLite, necessária para testar corretamente a constraint já existente.
+
+Em backend/:
+
+```powershell
+dotnet ef migrations has-pending-model-changes --project src/ZelaSP.Infrastructure --startup-project src/ZelaSP.Infrastructure --no-build
+```
+
+Exit 0: No changes have been made to the model since the last migration. Não houve geração/aplicação de migração. Restore não foi necessário/executado: nenhuma dependência/projeto alterado. Bin/obj utilizados normalmente sem limpeza.
+
+Conferências Git somente leitura: diff --stat, diff --name-only e diff --check. Resultado final de whitespace sem problemas. Nenhum arquivo fora de backend/, em Mobile, DbContext, InitialCreate, snapshot ou script SQL consta das alterações; nenhum comando Git de alteração/commit/push/pull/merge foi executado.
+
+### Cobertura dos 64 novos casos
+
+- Cinco unitários da regra oficial: 0.00/89.99 false e 90.00/90.01/100.00 true.
+- 58 HTTP/SQLite: GET vazio/ordenado, última data e desempate por ID, null sem leitura, uma consulta e ausência de tracking; oito POSTs numéricos válidos, igualdade da persistência por outro DbContext e resposta/GET; 33 casos de payload inválido; dispositivo inexistente; Content-Types incorretos; 1024/1025 bytes com e sem Content-Length; horário UTC/submilissegundos; schema OpenAPI/contrato ESP32 e ausência de Location; leituras críticas repetidas sem modificar dados anteriores; CHECK numérica ativa via SQL somente no SQLite temporário; falha injetada de SaveChanges com 500 genérico sem leitura persistida.
+- Um diagnóstico SQL Server offline captura a expressão real do IoTStore e gera SQL com LEFT JOIN, TOP(1), ordenação por data/ID e sem APPLY. Interceptor exige zero tentativas de abrir conexão. Não é teste de execução no SQL Server.
+
+Snapshot antes/depois de duas leituras críticas compara bairros, categorias, dispositivos, ocorrências, imagens, históricos, eventos e mensagens preexistentes, preservados integralmente. A leitura anterior também permanece com valor/data originais. Duas requisições válidas iguais geram IDs distintos, comprovando/documentando ausência de idempotência, sem criar ocorrências automáticas ou históricos artificiais.
+
+### Inventário completo TASK-006
+
+Novos (10):
+- src/ZelaSP.Domain/RegraNivelCritico.cs
+- src/ZelaSP.Application/ContratosIoT.cs
+- src/ZelaSP.Application/IoTService.cs
+- src/ZelaSP.Infrastructure/IoTStore.cs
+- src/ZelaSP.Api/LimiteCorpoLeituraAttribute.cs
+- src/ZelaSP.Api/Controllers/DispositivosController.cs
+- src/ZelaSP.Api/Controllers/LeiturasController.cs
+- tests/ZelaSP.Tests/IoTTests.cs
+- tests/ZelaSP.Tests/IoTApiTests.cs
+- tests/ZelaSP.Tests/IoTSqlServerProjectionTests.cs
+
+Modificados (8):
+- src/ZelaSP.Infrastructure/DependencyInjection.cs
+- src/ZelaSP.Api/Program.cs
+- src/ZelaSP.Api/ContratoOpenApiTransformer.cs
+- tests/ZelaSP.Tests/OccurrenceApiFactory.cs
+- README.md
+- docs/API_CONTRACT.md
+- VALIDACAO.md
+- prompts.md
+
+Total: 18 arquivos, todos backend/, sem exclusões. Interface IIoTStore permanece junto aos contratos em ContratosIoT.cs; nenhuma arquitetura paralela ou repositório genérico. Alterações em OpenAPI restringem Location ao recurso de ocorrência que possui GET individual; imagens mantêm seu transformer próprio. Tipos/limites obrigatórios IoT, multipleOf 0.01 e erros são documentados sem modificar contratos de runtime anteriores.
+
+### Limites e pendências para Code Review
+
+DispositivoId não autentica o ESP32. Sem credenciais/tokens, anti-replay, idempotência ou cadastro de dispositivos nesta task. Retries após timeout podem duplicar leituras; não há promessa de confirmação de um request pela coincidência com a última leitura. Não houve seed no banco real. Nome/local devem ser técnicos e não conter informações pessoais.
+
+Testes usam somente dados fictícios no SQLite temporário e TestServer, além de tradução SQL offline. **Nenhum ESP32 físico, firmware ou escrita/leitura SQL Server foi executado.** Precisão/affinity SQLite não equivalem a validação física do provider SQL Server. Validação real de hardware/banco exige roteiro e autorização específicos. Não foram modificados status/PII/Risco Cidadão, Mobile, infraestrutura de rede/firewall ou outros integrantes. Sem IA na classificação, ocorrências automáticas, novos eventos, TASK-007 ou documentação acadêmica final. Aguarda Code Review e aprovação do PM antes de qualquer commit.

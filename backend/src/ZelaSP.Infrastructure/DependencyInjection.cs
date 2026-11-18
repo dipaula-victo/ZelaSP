@@ -10,6 +10,7 @@ public static class DependencyInjection
         services.AddScoped<IOcorrenciasStore, OcorrenciasStore>();
         services.AddScoped<IImagensStore, ImagensStore>();
         services.AddScoped<IRiscoCidadaoStore, RiscoCidadaoStore>();
+        services.AddScoped<IIoTStore, IoTStore>();
         return services;
     }
 }

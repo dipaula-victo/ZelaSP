@@ -1,4 +1,18 @@
-# ZelaSP — Backend / TASK-001 a TASK-005
+# ZelaSP — Backend / TASK-001 a TASK-006
+
+## Dispositivos e leituras — TASK-006
+
+`GET /api/dispositivos` lista dispositivos em `nome ASC, id ASC`, com última leitura por `lidaEm DESC, id DESC`. Retorna `[]` sem dispositivos e `ultimaLeitura: null` sem leituras. Projeção assíncrona com AsNoTracking, subconsulta escalar e left join em uma consulta, sem N+1 ou materialização de entidades. Regra pura no Domain: **nivelCritico = nivelPercentual >= 90.00m**; 0/89.99 são normais e 90/90.01/100 são críticos. Sem IA/Risco Cidadão ou geração de ocorrências.
+
+`POST /api/leituras` aceita somente `dispositivoId` inteiro positivo existente e `nivelPercentual` numérico de 0 a 100, com até duas casas efetivas. Exemplo: `{"dispositivoId":7,"nivelPercentual":95.25}` (ID ilustrativo; usar um dispositivo realmente provisionado). Servidor gera ID, data UTC de recebimento via TimeProvider com precisão de milissegundos e classificação derivada. Retorna 201 com esses dados, sem Location: não existe GET individual de leitura. Cliente não informa timestamp, id, nivelCritico, bairro ou outros campos. Nenhum dispositivo é criado automaticamente.
+
+Corpo limitado a **1024 bytes**, inclusive sem Content-Length, com leitura antes do model binding limitada a 1025 bytes para detectar excesso. JSON UTF-8 inválido, null, strings numéricas, campos desconhecidos/controlados ou duplicados são rejeitados. Precisão é conferida no token numérico original antes de converter para decimal, evitando arredondamento silencioso de números longos; notação científica é aceita se o valor for representável, estiver no intervalo e tiver precisão efetiva permitida. Zeros finais não aumentam a precisão: 90.0000 é válido, 90.001 é inválido. Erros 400/404/413/415/500 usam Problem Details e não ecoam payloads. Nome/local dos dispositivos devem conter identificação técnica, sem dados pessoais.
+
+Cada POST válido insere uma leitura; não modifica dados anteriores ou cria ocorrências, históricos, eventos de segurança ou mensagens de risco. Não há autenticação do ESP32: dispositivoId é somente referência, não credencial. Não há chave de idempotência; retries após timeout podem duplicar leituras, mesmo críticas. Não realizar retry indiscriminado ou afirmar confirmação de um envio apenas pela coincidência com a última leitura de outro request.
+
+Contrato e exemplo HTTP completo para ESP32 em [API_CONTRACT.md](docs/API_CONTRACT.md). Configure no firmware o host/IP e porta efetivos da API acessíveis na rede; localhost no ESP32 é o próprio dispositivo. Para demonstração em rede controlada, a API precisa escutar numa interface acessível (argumento `--urls` na execução existente); ajustar firewall é responsabilidade do ambiente, sem alterações automáticas nesta task. Não há firmware, seed real, autenticação, endpoint para cadastrar dispositivos ou teste físico ESP32 nesta entrega. O Mobile atual não possui consumidor/tela de telemetria; seus arquivos não foram alterados.
+
+Validação local em 18/11/2026: **317 aprovados, zero falhas e um SQL Server ignorado** (253 anteriores + 64 novos), build sem avisos/erros e EF sem mudanças pendentes. SQLite temporário com afinidade NUMERIC no DDL da fixture para o percentual, mantendo CHECK 0–100; produção/schema/migrações intactos. Tradução SQL Server da consulta foi conferida offline, com conexões bloqueadas. Nenhum acesso SQL Server, chamada externa ou dispositivo físico. Resultados completos em VALIDACAO.md; entrega aguarda Code Review.
 
 ## Risco Cidadão e IA — TASK-005
 
@@ -16,7 +30,7 @@ Cliente externo recebe somente `ResumoRiscoAi`, com números e enum de nível, e
 
 Validação local em 17/11/2026: build zero avisos/erros, **253 aprovados, zero falhas e um SQL Server ignorado** (203 anteriores + 50 novos). EF sem diferenças no modelo. Cliente externo exclusivamente simulado; integração HTTP implementada, mas chamada real à OpenAI **não executada**. Nenhum acesso SQL Server. Restore não foi necessário, sem alterações em dependências. Resultados completos em VALIDACAO.md.
 
-API CitizenTech do ZelaSP (Global Solution FIAP 2026.2), compartilhada pelas disciplinas C# Software Development e SOA & Web Services. A TASK-001 estabeleceu modelo/persistência SQL Server; a TASK-002 implementou ocorrências; a TASK-003 adicionou imagens; a TASK-004 implementou proteção PII; a TASK-005 acrescenta indicador global e adapter LLM com chamada real ainda não executada. IoT, autenticação e funcionalidades posteriores permanecem em tarefas próprias.
+API CitizenTech do ZelaSP (Global Solution FIAP 2026.2), compartilhada pelas disciplinas C# Software Development e SOA & Web Services. A TASK-001 estabeleceu modelo/persistência SQL Server; a TASK-002 implementou ocorrências; a TASK-003 adicionou imagens; a TASK-004 implementou proteção PII; a TASK-005 acrescenta indicador global e adapter LLM com chamada real ainda não executada. A TASK-006 acrescenta dispositivos e leituras; autenticação e funcionalidades posteriores permanecem em tarefas próprias.
 
 ## Proteção de relatos — TASK-004
 

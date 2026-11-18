@@ -41,7 +41,10 @@ internal sealed class OccurrenceApiFactory : WebApplicationFactory<Program>
         if (!db.Database.IsSqlite()) throw new InvalidOperationException("Only temporary SQLite is permitted here.");
         // SQLite cannot parse SQL Server's varbinary(max). Adapt only this unused image
         // column in the ephemeral fixture DDL; the production model/migration stay untouched.
-        var ddl = db.Database.GenerateCreateScript().Replace("varbinary(max)", "BLOB", StringComparison.Ordinal);
+        var ddl = db.Database.GenerateCreateScript().Replace("varbinary(max)", "BLOB", StringComparison.Ordinal)
+            // SQLite maps decimal to TEXT by default; give this temporary column numeric
+            // affinity so the existing 0..100 CHECK compares numbers, not strings.
+            .Replace("\"nivel_percentual\" TEXT", "\"nivel_percentual\" NUMERIC", StringComparison.Ordinal);
         await db.Database.ExecuteSqlRawAsync(ddl);
         if (seedReferences)
         {
