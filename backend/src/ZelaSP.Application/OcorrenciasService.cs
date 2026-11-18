@@ -18,24 +18,37 @@ public sealed class OcorrenciasService(IOcorrenciasStore store, TimeProvider clo
             erros["categoriaId"] = ["Categoria não cadastrada."];
         if (erros.Count > 0) throw new ValidacaoAplicacaoException(erros);
 
+        var resultado = ProtecaoPii.Analisar(request.Descricao!.Trim());
+        if (resultado.Texto.Length > 4000)
+            throw new ValidacaoAplicacaoException(new() { ["descricao"] = ["A descrição protegida excede 4000 caracteres. Reduza o texto e envie novamente."] });
+        var agora = clock.GetUtcNow().UtcDateTime;
+        var eventos = resultado.Deteccoes.Select(tipo => new EventoSeguranca
+        {
+            TipoEvento = "PII_DETECTADO", TipoDado = tipo.ToString(), Origem = "API_OCORRENCIAS",
+            Destino = "BANCO", Acao = "MASCARADO", OcorridoEm = agora
+        }).ToArray();
         return await store.CriarAsync(new Ocorrencia
         {
             BairroId = request.BairroId.Value, CategoriaId = request.CategoriaId.Value,
-            Descricao = request.Descricao!.Trim(), Status = FluxoStatusOcorrencia.Inicial,
-            Origem = OrigemOcorrencia.APP, CriadaEm = clock.GetUtcNow().UtcDateTime
-        }, ct);
+            Descricao = resultado.Texto, Status = FluxoStatusOcorrencia.Inicial,
+            Origem = OrigemOcorrencia.APP, CriadaEm = agora
+        }, ct, eventos);
     }
 
     public async Task<OcorrenciaResponse> ObterAsync(int id, CancellationToken ct) =>
-        await store.ObterAsync(id, ct) ?? throw new RecursoNaoEncontradoException("Ocorrência não encontrada.");
+        ProtegerResposta(await store.ObterAsync(id, ct) ?? throw new RecursoNaoEncontradoException("Ocorrência não encontrada."));
 
-    public Task<PaginaOcorrenciasResponse> ListarAsync(ListarOcorrenciasQuery query, CancellationToken ct)
+    public async Task<PaginaOcorrenciasResponse> ListarAsync(ListarOcorrenciasQuery query, CancellationToken ct)
     {
         Validar(query);
         if ((long)(query.Pagina - 1) * query.TamanhoPagina > int.MaxValue)
             throw new ValidacaoAplicacaoException(new() { ["pagina"] = ["Página excede o intervalo suportado."] });
-        return store.ListarAsync(query, ct);
+        var pagina = await store.ListarAsync(query, ct);
+        return pagina with { Itens = pagina.Itens.Select(ProtegerResposta).ToArray() };
     }
+
+    private static OcorrenciaResponse ProtegerResposta(OcorrenciaResponse resposta) =>
+        resposta with { Descricao = ProtecaoPii.Analisar(resposta.Descricao).Texto };
 
     public async Task<OcorrenciaResponse> AtualizarStatusAsync(int id, AtualizarStatusRequest request, CancellationToken ct)
     {

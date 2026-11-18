@@ -40,9 +40,11 @@ public sealed class OcorrenciasStore(ZelaSpDbContext db) : IOcorrenciasStore
             (int)Math.Ceiling((double)total / query.TamanhoPagina));
     }
 
-    public async Task<OcorrenciaResponse> CriarAsync(Ocorrencia ocorrencia, CancellationToken ct)
+    public async Task<OcorrenciaResponse> CriarAsync(Ocorrencia ocorrencia, CancellationToken ct, IReadOnlyList<EventoSeguranca>? eventos = null)
     {
         db.Ocorrencias.Add(ocorrencia);
+        if (eventos is not null) db.EventosSeguranca.AddRange(eventos);
+        // One relational SaveChanges commits the occurrence and all audit events atomically.
         await db.SaveChangesAsync(ct);
         return Map(ocorrencia);
     }

@@ -1,6 +1,6 @@
-# Evidências de validação — TASK-001, TASK-002 e TASK-003
+# Evidências de validação — TASK-001 a TASK-004
 
-**Estado atual (16/11/2026): validação real de imagens concluída com exit code 0, sob autorização específica da TASK-003; 111 testes locais/offline aprovados e um SQL Server ignorado no encerramento.** Ver a última seção. As seções anteriores registram etapas históricas, inclusive a pré-validação sem escrita. A autorização antiga de ocorrências não foi reutilizada.
+**Estado atual (17/11/2026): TASK-004 corrigida após revisão de rótulos em senhas; 203 testes locais aprovados, um SQL Server ignorado, build sem erros/avisos e EF sem diferenças pendentes.** Ver a última seção. Nenhum acesso SQL Server nesta task. As seções anteriores registram etapas históricas, inclusive as provas reais autorizadas das TASKs 002/003; essas autorizações não foram reutilizadas.
 
 Execução em 14/11/2026, Windows, SDK 10.0.202, runtime 10.0.6. Nenhuma conexão ou escrita SQL executada. Todos os arquivos do projeto criados somente em `backend/`. Os caches globais de ferramentas/pacotes do SDK foram utilizados com permissão do ambiente; não são alterações no conteúdo do monorepo.
 
@@ -692,3 +692,136 @@ Resultado: exit 0, `No changes have been made to the model since the last migrat
 Git somente leitura: `git branch --show-current`, `git status --short --untracked-files=all`, `git diff --stat`, `git diff --check`, `git diff --name-only`. Branch `feature/task-003-occurrence-images`. Inventário final: 21 arquivos (13 novos, oito modificados), todos backend/, nenhuma exclusão. O inventário histórico de 20 recebeu somente o diagnóstico adicional `tests/ZelaSP.Tests/ImagensSqlServerProjectionTests.cs`. InitialCreate, snapshot, entidades, projetos e dependências não constam das alterações.
 
 Consolidados neste encerramento: README, VALIDACAO, prompts, API_CONTRACT e IMAGENS_SQLSERVER_INTEGRATION. Sem código novo, escrita SQL, repetição de uploads, teste SQL com escrita, alteração Git ou TASK-004. Pendente revisão final e autorização do PM para commit. Identificação acadêmica não autentica; assinatura não comprova integridade ou segurança completa do arquivo.
+
+## TASK-004 — Motor PII e proteção de relatos — 17/11/2026
+
+### Escopo, inspeção e implementação
+
+Branch confirmada `feature/task-004-pii-protection`, working tree inicialmente limpo. Inspecionados serviços/stores/DTOs, pipeline HTTP, testes e mapeamento de EVENTO_SEGURANCA. Os campos permitem tipo_evento/tipo_dado até 80, origem/destino/acao até 120, UTC datetime2(3), sem CHECK de vocabulário. Não foi necessário alterar entidades, DbContext, InitialCreate, designer, snapshot ou DDL.
+
+ProtecaoPii é um componente puro e determinístico em Application. Seu resultado contém somente texto sanitizado e categorias; não carrega valores originais, offsets ou trechos em DTOs de auditoria. CPF exige onze dígitos e dois verificadores corretos, excluindo sequências repetidas. Telefone exige DDD da lista brasileira e assinante convencional, com +55 opcional. E-mail reconhece formato ASCII convencional. Senha reconhece senha:, senha= e senha é; valores com espaços/delimitadores exigem aspas na mesma linha. Saúde reconhece seis termos aprovados com limites de palavra, caixa indiferente e variantes de acento. Limitações e formatos estão descritos no README.
+
+Rótulos exatos: [CPF OCULTADO], [TELEFONE OCULTADO], [E-MAIL OCULTADO], [SENHA OCULTADA], [SAÚDE OCULTADA]. Precedência para sobreposições SENHA > EMAIL > CPF > TELEFONE > SAUDE; empate por maior comprimento e posição inicial. Cada trecho selecionado gera uma categoria; sobreposições subordinadas não geram duplicação; repetições separadas geram eventos individuais. Rótulos conhecidos são preservados, inclusive após senha:, sem novos eventos. Regex usam NonBacktracking, CultureInvariant e timeout de 250 ms; falha aborta o fluxo sem persistir o original.
+
+O POST mantém validações anteriores e referências, protege após trim e rejeita texto protegido acima de 4000 caracteres com 400 antes da gravação. OcorrenciasStore.CriarAsync recebeu parâmetro interno opcional de eventos e executa um único SaveChangesAsync para ocorrência e todos os eventos; a transação automática do provider relacional garante tudo ou nada. Auditoria: PII_DETECTADO / categoria / API_OCORRENCIAS / BANCO / MASCARADO / mesmo instante UTC da criação. Nenhum valor original, hash, posição ou trecho pessoal é armazenado nos eventos. Sem detecção não há evento. O schema não contém FK evento→ocorrência; nenhum vínculo novo foi inventado. A atomicidade não implica correlação relacional individual.
+
+Respostas de detalhe/listagem e do PATCH protegem também descrições legadas, sem regravar o banco ou auditar leituras. As regras e a transação de status/histórico não foram alteradas. DTOs públicos e códigos HTTP permanecem; erro automático de binding/validação passa a usar mensagem fixa em errors.request, evitando eco de nomes/valores do cliente. Logs de framework ASP.NET Core/EF são suprimidos e diagnósticos de exceções tratadas também; nenhum body logging ou logging sensível foi introduzido. Essa política reduz observabilidade e exige revisão para futura telemetria segura.
+
+### Comandos e resultados realmente executados
+
+Na raiz, antes das suítes, conferida a ausência de ZELASP_SQLSERVER_TASK002_WRITE_AUTHORIZATION; a variável nunca foi habilitada.
+
+```powershell
+dotnet restore backend/ZelaSP.sln
+dotnet build backend/ZelaSP.sln --no-restore
+dotnet test backend/ZelaSP.sln --no-build --no-restore --filter 'FullyQualifiedName~ProtecaoPiiTests|FullyQualifiedName~PiiApiTests' --logger 'console;verbosity=minimal'
+dotnet test backend/ZelaSP.sln --no-build --no-restore --logger 'console;verbosity=minimal'
+dotnet test backend/ZelaSP.sln --no-build --no-restore
+```
+
+Restore: a primeira execução no sandbox falhou ao ler NuGet.Config do perfil. A repetição do mesmo comando fora do sandbox foi aprovada individualmente e terminou exit 0, todos os projetos atualizados. Nenhuma dependência adicionada ou alterada.
+
+Builds incrementais: exit 0, zero avisos/erros. Primeira rodada isolada de 52 novos casos: 47 aprovados e cinco falhas nos testes. Quatro falhas eram desserialização dos enums textuais sem JsonStringEnumConverter no cliente de teste; corrigido somente o helper novo. A quinta usava uma sequência de dez dígitos como suposto exemplo inválido, mas ela atendia às regras de TELEFONE; substituída por exemplo de nove dígitos. Não se alterou a produção para fazer a expectativa incorreta passar. Após correções, suíte com 163 aprovados e um SQL ignorado. Acrescentadas provas de eventos por repetição e senha com rótulo parcial; última suíte: **165 aprovados, zero falhas, um SQL Server ignorado, 166 totais**, exit 0. O conjunto anterior de 111 casos continua aprovado.
+
+Em backend/:
+
+```powershell
+dotnet ef migrations has-pending-model-changes --project src/ZelaSP.Infrastructure --startup-project src/ZelaSP.Infrastructure --no-build
+```
+
+Executado com startup Infrastructure em ambas as conferências: exit 0, `No changes have been made to the model since the last migration.` Nenhuma migração aplicada e nenhuma conexão SQL Server aberta. Não houve execução do teste de escrita autorizado em tarefa anterior.
+
+### Cobertura e prova transacional
+
+54 novos casos automatizados: 43 unitários e 11 de integração HTTP/SQLite. Cobrem CPF válido/inválido, formatos, telefone/DDD, e-mail, senha e valores entre aspas, seis termos de saúde, caixa/acentos, texto sem PII, múltiplos tipos/repetições, prioridade de sobreposição, idempotência/rótulos, limites antes/depois da expansão, persistência protegida, respostas POST/GET/lista/PATCH, leitura legada sem regravação, auditoria segura, erros de binding sem eco e logs.
+
+A prova de atomicidade usa a API e store reais, SQLite relacional em memória e um interceptor de comando que deixa executar o primeiro INSERT e lança uma falha antes do segundo. O teste exige dois INSERTs tentados e retorno do primeiro comando, HTTP 500 genérico e consulta por outro DbContext com zero ocorrências e zero eventos. Bairros/categorias fictícios de referência permanecem intactos. A mensagem injetada contém somente sentinelas fictícias, cuja ausência em resposta e logs capturados é verificada. Não há mock de persistência. Isso comprova rollback no provider SQLite; não é prova nova de execução SQL Server.
+
+Os testes novos verificam UTC, ABERTA/APP, metadados técnicos fixos, ausência de histórico/mensagem de risco na criação e eventos não duplicados por leituras/PATCH. Há um evento por trecho efetivamente mascarado, não por cada candidato sobreposto.
+
+### Inventário e regressão
+
+Novos:
+- src/ZelaSP.Application/ProtecaoPii.cs
+- tests/ZelaSP.Tests/ProtecaoPiiTests.cs
+- tests/ZelaSP.Tests/PiiApiTests.cs
+
+Modificados:
+- src/ZelaSP.Application/OcorrenciasService.cs
+- src/ZelaSP.Application/IOcorrenciasStore.cs
+- src/ZelaSP.Infrastructure/OcorrenciasStore.cs
+- src/ZelaSP.Api/Program.cs
+- src/ZelaSP.Api/ContratoOpenApiTransformer.cs
+- tests/ZelaSP.Tests/OccurrenceConcurrencyTests.cs
+- README.md
+- docs/API_CONTRACT.md
+- VALIDACAO.md
+- prompts.md
+
+A única mudança em teste anterior foi a assinatura/delegação de CriarAsync no decorator do teste de concorrência, para encaminhar o novo parâmetro interno opcional de eventos. Nenhum cenário ou assert anterior foi removido ou relaxado. Contratos REST não receberam novos campos. Nenhuma alteração em projetos/pacotes, entidades, fluxo de status, imagens ou migrações.
+
+### Limites e pendências
+
+Motor heurístico, sem detecção universal, análise semântica, autenticação, OCR, LLM, Taint Analysis completo ou painel. Identificadores numéricos podem parecer telefones; CPF inválido como CPF pode ser reconhecido como telefone válido. Negação/citação de termo médico também é mascarada. Senhas fora das expressões reconhecidas e formatos internacionais/ofuscados podem não ser detectados. Dados legados continuam armazenados como estavam; somente suas respostas são protegidas. Não foi feita limpeza, migração de dados ou prova SQL Server da TASK-004. Observabilidade dos frameworks está reduzida por proteção explícita. Nenhum arquivo fora de backend/ alterado, nenhum Git de alteração ou TASK-005. Aguarda Code Review do PM/Arquiteto antes de preparar commit.
+## TASK-004 — Correção pós-Code Review: senha com múltiplas palavras — 17/11/2026
+
+Causa: o ramo sem aspas da regex encerrava o valor no primeiro espaço. A expressão `senha: minha senha ficticia` deixava fragmentos após o primeiro token. A revisão autoriza exclusivamente corrigir esse limite; nenhuma alteração de persistência, auditoria, contrato, schema ou demais detectores foi feita nesta etapa.
+
+A regex agora reconhece a expressão de introdução; um scanner limitado pelo tamanho do relato determina o trecho do valor. Sem aspas, inclui espaços e pontuação interna (ponto, !, ?, @), até vírgula, ponto e vírgula, CR/LF/NEL/LS/PS, próxima expressão reconhecida de senha ou fim do texto. Delimitadores e espaços finais são preservados. Em casos ambíguos, protege toda a narrativa até esse limite. Entre aspas simples/duplas, o fechamento na mesma linha continua delimitando o valor; pontuação interna é incluída e texto posterior é preservado. Marcadores dentro das aspas não são tratados como outra senha. Aspa não fechada usa o fallback conservador sem aspas.
+
+Rótulos conhecidos isolados após a expressão permanecem protegidos e não geram nova detecção; texto seguinte é tratado como narrativa. Quando houver conteúdo adicional colado ao rótulo, o valor continua sujeito ao mascaramento. Sobreposição e precedência das cinco categorias permanecem; um CPF/e-mail dentro da senha é abrangido por um único evento SENHA. CPF, telefone, e-mail e saúde não tiveram suas regras modificadas.
+
+Limitações: vírgula/ponto e vírgula são fronteiras explícitas para valores sem aspas; não há interpretação semântica para distinguir narrativa e senha. Senhas reais com esses caracteres precisam de aspas. Valores multilinha não são tratados como senha única; aspas escapadas não têm sintaxe especial. A proteção pode ocultar texto não sensível. Marcadores não previstos/ofuscados continuam fora do reconhecimento. Isso é uma política heurística documentada, não garantia universal.
+
+Foram mantidos os 165 casos anteriores, com duas adaptações diretamente justificadas:
+- A expectativa de `senha: SegredoFicticio! restante` agora mascara também `restante`, conforme a política conservadora.
+- A amostra de múltiplas categorias recebeu ponto e vírgula após o valor de senha para continuar verificando saúde fora desse valor; mantém os mesmos asserts de sete detecções e cinco categorias, sem afrouxá-los.
+
+Adicionados **22 casos**: 18 unitários e quatro HTTP/SQLite. Incluem senha simples, múltiplas palavras com os três marcadores, pontuação, CRLF/LF/Unicode, aspas, marcador dentro de aspas, CPF/e-mail no valor, rótulo existente, múltiplas senhas com/sem pontuação e aspa sem fechamento. Todos os casos unitários conferem também idempotência. Integração verifica igualdade exata do texto integralmente protegido no POST, GET individual, listagem e outro DbContext SQLite; também verifica eventos SENHA e ausência de histórico, sem alterar a persistência.
+
+Comandos executados na raiz:
+
+```powershell
+dotnet build backend/ZelaSP.sln --no-restore
+dotnet test backend/ZelaSP.sln --no-build --no-restore
+```
+
+Resultados reais: build exit 0, zero avisos/erros; testes exit 0, **187 aprovados, zero falhas, um SQL Server ignorado, 188 totais**. A variável ZELASP_SQLSERVER_TASK002_WRITE_AUTHORIZATION estava ausente antes da suíte e não foi habilitada. Nenhum acesso SQL Server. Nenhum restore necessário ou executado nesta correção.
+
+Em backend/:
+
+```powershell
+dotnet ef migrations has-pending-model-changes --project src/ZelaSP.Infrastructure --startup-project src/ZelaSP.Infrastructure --no-build
+```
+
+Resultado exit 0: `No changes have been made to the model since the last migration.` Não houve falha intermediária de build/testes nesta correção.
+
+Arquivos editados exclusivamente nesta revisão: src/ZelaSP.Application/ProtecaoPii.cs, tests/ZelaSP.Tests/ProtecaoPiiTests.cs, tests/ZelaSP.Tests/PiiApiTests.cs, README.md, VALIDACAO.md e prompts.md. As demais alterações da TASK-004 já estavam presentes e foram preservadas. Nenhum novo arquivo, pacote, migração, mudança em InitialCreate/snapshot, contrato REST ou persistência; nenhum comando Git de alteração, commit, push ou TASK-005. Aguarda nova revisão do PM.
+## TASK-004 — Rótulos com sufixo em valores de senha — 17/11/2026
+
+Branch conferida feature/task-004-pii-protection; alterações anteriores da task preservadas. Causa identificada: a verificação antecipada de rótulo aceitava o prefixo seguido de espaço e ignorava o restante do valor. Exemplo: senha: [CPF OCULTADO] SegredoFicticio123. Removida essa saída antecipada. Primeiro determina-se o limite completo do valor segundo a política aprovada; somente quando esse conteúdo inteiro corresponde a um rótulo conhecido ele é tratado como já mascarado. Prefixos seguidos de conteúdo adicional são protegidos como SENHA, sem alterações na persistência/auditoria.
+
+A política de limites continua: sem aspas, vírgula, ponto e vírgula, quebra de linha, próximo marcador de senha ou fim; espaços, pontos, !, ? e @ são internos. Com aspas correspondentes, o valor termina na aspa de fechamento na mesma linha. A saída agora preserva as aspas ao redor do rótulo: senha: "[SENHA OCULTADA]" narrativa. Isso é necessário para que a segunda aplicação não interprete narrativa posterior às aspas originais como sufixo de uma senha sem aspas. Não há mudança de campos, tipos ou códigos REST; muda apenas a representação textual sanitizada, preservando seu delimitador.
+
+Adicionados 16 casos: dez unitários (cinco rótulos com sufixo, cinco integralmente mascarados) e seis HTTP/SQLite. Testam formas com/sem aspas, texto separado por delimitador, repetição do sanitizador, POST, GET individual/lista, DbContext independente, ausência do segredo fictício na resposta/banco/eventos, zero eventos para valor já protegido e um evento SENHA para sufixo mascarado. Os testes anteriores foram mantidos, ajustando três amostras que tratavam texto após rótulo como fora do valor sem delimitador (uma expectativa passa a mascarar todo o trecho; duas amostras receberam ponto e vírgula) e sete expectativas de valores entre aspas para preservar essas aspas. Nenhuma assertion foi removida; os testes continuam exigindo idempotência e proteção integral.
+
+A primeira rodada após remover o atalho teve 196 aprovados, cinco falhas e um SQL ignorado. As cinco falhas ocorreram na reaplicação de saídas de senhas entre aspas, pois o rótulo sem aspas perdia a fronteira original. A correção de produção passou a preservar as aspas, em vez de ignorar o problema ou relaxar idempotência. Adicionados também dois casos HTTP para os limites entre aspas.
+
+Comandos realmente executados na raiz:
+
+```powershell
+dotnet build backend/ZelaSP.sln --no-restore
+dotnet test backend/ZelaSP.sln --no-build --no-restore
+```
+
+Resultado final: build exit 0, zero erros/avisos; testes exit 0, **203 aprovados, zero falhas, um SQL Server ignorado, 204 totais**. A variável ZELASP_SQLSERVER_TASK002_WRITE_AUTHORIZATION permaneceu ausente e o teste protegido não foi executado. Não houve restore ou acesso SQL Server.
+
+Em backend/:
+
+```powershell
+dotnet ef migrations has-pending-model-changes --project src/ZelaSP.Infrastructure --startup-project src/ZelaSP.Infrastructure --no-build
+```
+
+Resultado final exit 0: No changes have been made to the model since the last migration. Nenhuma alteração em entidades, schema, InitialCreate, snapshot, migrações ou dependências. Executado git diff --check após os documentos; sem problemas de whitespace. Git somente leitura.
+
+Arquivos modificados nesta revisão: src/ZelaSP.Application/ProtecaoPii.cs, tests/ZelaSP.Tests/ProtecaoPiiTests.cs, tests/ZelaSP.Tests/PiiApiTests.cs, README.md, VALIDACAO.md, prompts.md. As demais alterações da TASK-004 precedem esta revisão e foram preservadas. Limitações heurísticas e de delimitadores continuam documentadas; texto adicional dentro do valor não é presumido público. Nenhum Mobile/outro diretório alterado, nenhuma escrita SQL, commit/push/pull/merge, dependência nova ou TASK-005. Aguarda revisão do Product Manager.

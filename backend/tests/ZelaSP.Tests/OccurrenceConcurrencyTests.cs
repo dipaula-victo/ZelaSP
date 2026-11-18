@@ -167,7 +167,7 @@ public sealed class OccurrenceConcurrencyTests(ITestOutputHelper output)
         public Task<bool> BairroExisteAsync(int id, CancellationToken ct) => actual.BairroExisteAsync(id, ct);
         public Task<bool> CategoriaExisteAsync(int id, CancellationToken ct) => actual.CategoriaExisteAsync(id, ct);
         public Task<PaginaOcorrenciasResponse> ListarAsync(ListarOcorrenciasQuery query, CancellationToken ct) => actual.ListarAsync(query, ct);
-        public Task<OcorrenciaResponse> CriarAsync(Ocorrencia occurrence, CancellationToken ct) => actual.CriarAsync(occurrence, ct);
+        public Task<OcorrenciaResponse> CriarAsync(Ocorrencia occurrence, CancellationToken ct, IReadOnlyList<EventoSeguranca>? eventos = null) => actual.CriarAsync(occurrence, ct, eventos);
         public Task AlterarStatusComHistoricoAsync(int id, StatusOcorrencia previous, StatusOcorrencia next,
             DateTime changed, string executor, CancellationToken ct) => actual.AlterarStatusComHistoricoAsync(id, previous, next, changed, executor, ct);
         public Task<IReadOnlyList<HistoricoStatusResponse>> HistoricoAsync(int id, CancellationToken ct) => actual.HistoricoAsync(id, ct);

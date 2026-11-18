@@ -2,14 +2,24 @@ using ZelaSP.Infrastructure;
 using ZelaSP.Application;
 using ZelaSP.Api;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
+// Framework diagnostics can include request values or provider exceptions. Do not emit
+// these categories until a structured, sanitized diagnostic pipeline is implemented.
+builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.None);
+builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.None);
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.AllowInputFormatterExceptionMessages = false;
     options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.Strict;
     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false));
 });
+builder.Services.Configure<ApiBehaviorOptions>(options => options.InvalidModelStateResponseFactory = _ =>
+    new BadRequestObjectResult(new HttpValidationProblemDetails(new Dictionary<string, string[]>
+    {
+        ["request"] = ["Requisição inválida. Confira os campos, tipos e limites do contrato."]
+    }) { Status = 400, Title = "Um ou mais campos são inválidos." }));
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.NumberHandling = JsonNumberHandling.Strict;
@@ -34,7 +44,7 @@ builder.Services.AddSingleton(new EquipeAcademica(builder.Configuration["Academi
     builder.Configuration.GetSection("Academico:Executores").Get<string[]>() ?? []));
 builder.Services.AddScoped<ImagensService>();
 var app = builder.Build();
-app.UseExceptionHandler();
+app.UseExceptionHandler(new ExceptionHandlerOptions { SuppressDiagnosticsCallback = _ => true });
 app.UseStatusCodePages();
 if (app.Environment.IsDevelopment()) app.MapOpenApi();
 app.MapControllers();
