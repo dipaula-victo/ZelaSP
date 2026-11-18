@@ -1,6 +1,6 @@
-# Evidências de validação — TASK-001 a TASK-006
+# Evidências de validação — TASK-001 a TASK-006 e preparação TASK-007
 
-**Estado atual (18/11/2026): TASK-006 implementada para Code Review; 317 testes locais aprovados, um SQL Server ignorado, build sem erros/avisos e EF sem diferenças pendentes.** Ver a última seção. Nenhum acesso SQL Server nesta task. As seções anteriores registram etapas históricas, inclusive as provas reais autorizadas das TASKs 002/003; essas autorizações não foram reutilizadas.
+**Estado atual (18/11/2026): artefatos offline TASK-007 preparados para Code Review, sem execução de scripts, testes, build, SQL ou serviços externos.** A última suíte histórica é 317 aprovados/um SQL Server ignorado, não repetida nesta fase. Ver a última seção. As seções anteriores registram etapas históricas, inclusive as provas reais autorizadas das TASKs 002/003; essas autorizações não foram reutilizadas.
 
 Execução em 14/11/2026, Windows, SDK 10.0.202, runtime 10.0.6. Nenhuma conexão ou escrita SQL executada. Todos os arquivos do projeto criados somente em `backend/`. Os caches globais de ferramentas/pacotes do SDK foram utilizados com permissão do ambiente; não são alterações no conteúdo do monorepo.
 
@@ -1004,3 +1004,78 @@ Total: 18 arquivos, todos backend/, sem exclusões. Interface IIoTStore permanec
 DispositivoId não autentica o ESP32. Sem credenciais/tokens, anti-replay, idempotência ou cadastro de dispositivos nesta task. Retries após timeout podem duplicar leituras; não há promessa de confirmação de um request pela coincidência com a última leitura. Não houve seed no banco real. Nome/local devem ser técnicos e não conter informações pessoais.
 
 Testes usam somente dados fictícios no SQLite temporário e TestServer, além de tradução SQL offline. **Nenhum ESP32 físico, firmware ou escrita/leitura SQL Server foi executado.** Precisão/affinity SQLite não equivalem a validação física do provider SQL Server. Validação real de hardware/banco exige roteiro e autorização específicos. Não foram modificados status/PII/Risco Cidadão, Mobile, infraestrutura de rede/firewall ou outros integrantes. Sem IA na classificação, ocorrências automáticas, novos eventos, TASK-007 ou documentação acadêmica final. Aguarda Code Review e aprovação do PM antes de qualquer commit.
+
+## TASK-007 — Preparação offline da demonstração — 18/11/2026
+
+### Escopo e estado inicial
+
+Autorizados somente artefatos documentais/scripts de preparação sob backend/. Branch confirmada feature/task-007-demo-validation, HEAD 7b60d44 (merge da TASK-006), working tree inicialmente limpo. Nenhuma implementação de produção, alteração de contrato REST, entidade, DbContext, schema, migração, configuração runtime, Mobile ou dependência.
+
+Foram preparados plano lógico, manifesto sem IDs/resultados observados, amostras fictícias, preparador de diretório local novo, SQL de referências, SELECTs parametrizados, procedimentos HTTP manuais, roteiro T01–T10/índice E01–E09, reinício/renderização de imagens e incompatibilidades Mobile. Scripts do pacote não foram executados. Não há executor HTTP automático ou integração de provisionamento ao startup/build/testes.
+
+### Plano e guardas
+
+Lote futuro: 2 bairros, 4 categorias, 3 ocorrências, 3 históricos, 2 imagens, 2 dispositivos, 3 leituras e 5 eventos PII, zero mensagens de risco; total planejado 24 registros. Estados finais A ABERTA/0 histórico, B EM_ANALISE/1 e C RESOLVIDA/2. PNG/JPEG em B; leituras 89.99/90.00/90.01 no dispositivo próprio e outro sem leitura. Todos esses resultados estão PENDENTES; não se assume existência dos registros históricos no SQL Server.
+
+Marcador TASK007-DEMO- seguido de GUID N minúsculo fornecido explicitamente. O manifesto mantém destino esperado separado de destino observado nulo e aprovações de SQL/HTTP/processos/serviços externos falsas. IDs só por OUTPUT/retornos reais após autorização. Preparador local requer destino/baseUri/confirmação/marcador e recusa pasta existente, sem sobrescrever ou limpar. Não conecta ou envia requests e não executa detector PII.
+
+SQL de criação contém só três INSERTs com oito linhas de referências, nenhuma alteração de registros anteriores. Exige autorização futura, preflight/janela exclusiva, destino e autenticação integrados, histórico/tabelas/ausência de triggers habilitadas e ausência do marcador. Bloqueios protegem a verificação/criação cooperativa, em transação própria; não aceita transação externa. Em erro, desfaz somente sua transação ainda não confirmada. Timeout após commit é AMBIGUO, sem retry ou reparação. Retomada exige SELECTs e revisão, não escolha automática entre IDs duplicados.
+
+SQLs de leitura têm parâmetros/guardas próprios: preflight, resultados do lote, agregação global de risco e recuperação por marcador. Nenhum USE, DDL permanente ou executor de conexão. Não se compilou/validou SQL em servidor nesta fase: runtime SQL ainda depende de aprovação. Eventos não têm FK de ocorrência/marcador; correlacionam-se somente por IDs novos, baseline, horário persistido e janela exclusiva, sob ressalva explícita. Concorrência/dúvida impede continuar; não se edita auditoria para adicionar marcador. O risco global pode conter baseline/saturar: não se assume 30 total.
+
+### Revisão estática e preparação de amostras realmente realizadas
+
+Somente comandos locais de leitura/escrita de artefatos, sem execução dos arquivos preparados:
+
+- Git de leitura: branch --show-current, status --short, log -1, diff --check e inventário por rg.
+- Leitura de fontes e conversão das constantes Base64 de ImagemFixtures.cs para duas cópias binárias em demo/amostras/. Não foi compilada/invocada a fixture ou usado serviço de imagens.
+- Comprimento/hash dos arquivos locais: PNG 120 bytes, SHA-256 a5c8f1a1213865e9ef89420f46e08085aa9e1c94a1723bf77218d44865f10575; JPEG 634 bytes, SHA-256 9d8e6351c67193ebe9c11de358c8e54f127521aa511d6a1dc6003f64877e4860. Isso confirma a cópia da referência, não novo upload/renderização/persistência.
+- Leitura de JSON por ConvertFrom-Json: carga.template.json e manifesto.template.json legíveis. Nenhum manifesto de execução real preenchido.
+- Parser PowerShell 5.1.26100.9818 sobre Preparar-Lote.ps1: zero erros de sintaxe, sem invocar/dot-source/executar seu conteúdo. Não é teste de comportamento do script.
+- Inspeção textual das instruções SQL: somente 02 contém DML, três INSERTs nas tabelas de referências. Não há comandos de exclusão/alteração de schema ou registros anteriores; COMMIT/ROLLBACK se restringem à transação própria futura.
+- Contagem estática de caracteres com marcador de comprimento 45: relato 173, expectativa protegida 186, ambos abaixo de 4000. Revisão manual dos cinco trechos/categorias e limites por leitura de ProtecaoPii.cs em demo/PII_REVISAO_ESTATICA.md. **Não executado detector/teste/API: cinco categorias/eventos permanecem expectativa, não resultado comprovado.**
+
+Não houve build, restore, testes automatizados, dotnet ef, consultas SQL, migrações, acesso SQL Server, requests API, OpenAI ou ESP32. A última suíte histórica de 317 aprovados/um ignorado não foi repetida e não foi declarada como resultado da TASK-007. Nenhuma autorização SQL anterior ou credencial foi reutilizada/inserida. Valores do relato são sentinelas fictícias, não credenciais reais ou dados de pessoas.
+
+### Inventário completo
+
+Novos (20), todos sob backend/demo/:
+- README.md
+- carga.template.json
+- manifesto.template.json
+- Preparar-Lote.ps1
+- PII_REVISAO_ESTATICA.md
+- PROCEDIMENTOS_HTTP.md
+- REINICIO_IMAGENS.md
+- COMPATIBILIDADE_MOBILE.md
+- EVIDENCIAS.md
+- amostras/README.md
+- amostras/relato-pii.template.txt
+- amostras/relato-pii-protegido.esperado.txt
+- amostras/pixel-ficticio.png
+- amostras/pixel-ficticio.jpeg
+- sql/README.md
+- sql/01-preflight.sql
+- sql/02-criar-referencias.sql
+- sql/03-verificar-lote.sql
+- sql/04-conferir-risco.sql
+- sql/05-recuperar-referencias.sql
+
+Modificados (3): backend/README.md, backend/VALIDACAO.md e backend/prompts.md. Total 23 arquivos de entrega; nenhuma exclusão ou mudança fora de backend/. Nenhuma classe de produção/teste ou arquivo de configuração existente foi modificado. Não foi criada pasta de execução real pelo preparador. Git diff --check final sem problemas de whitespace; nenhum Git de alteração, commit/push/merge ou TASK-008.
+
+### Ressalvas e próximas autorizações
+
+Este pacote é preparação offline revisável, não carga aplicada ou demonstração validada. Procedimentos HTTP têm guardas operacionais manuais; não há executor automático que certifique destino/IDs para o operador. O comando integral e parâmetros concretos de qualquer executor futuro devem ser aprovados novamente. Aprovar nomes com sufixo de marcador, persistência dos 24 registros, isolamento de escritores e critérios de interrupção.
+
+Exigem autorização posterior separada: executar o preparador local; testes/build/validações locais; conexão SQL de leitura; execução SQL de referências; onze mutações HTTP e gravação das evidências; reinícios apenas de processos próprios; eventual inferência OpenAI real/hardware/rollback adicional. Não criar falhas por headers Mobile inexistentes no backend. PII heurística, eventos sem FK, ausência de idempotência e diferença de precisão temporal exigem as conferências previstas. Nenhum dado histórico é baseline atual.
+
+Mobile possui divergências de rotas/payloads/paginação/histórico/status/equipe, documentadas sem correção. Mock não é integração real. T01–T10/E01–E09 são organização interna; critérios oficiais/formatos/prazo dependem de conferência documental. DER/dicionário/relatório/capturas finais não são declarados concluídos. Aguarda Code Review do PM/Arquiteto e nova autorização antes de qualquer execução.
+## TASK-007 — ajustes após revisão do pacote offline (18/11/2026)
+
+Branch conferida: feature/task-007-demo-validation. Havia alterações locais em README, VALIDACAO, prompts e o pacote demo não rastreado; foram preservadas.
+
+Correções: ignore restrito a /demo/execucoes/ em backend/.gitignore; procedimento exclusivamente documental em demo/sql/PROCEDIMENTO_EXECUCAO.md; correlação operacional PII explicitada nos SQLs 03/05 e documentação. O manifesto não declara propriedade relacional dos eventos. CPF com verificadores válidos não tem inexistência ou titularidade comprovada.
+
+Inspeções realizadas: git branch --show-current; git status --short --untracked-files=all; git diff --stat; git diff --name-only; git diff --check (sem apontamentos). git check-ignore -v confirmou a regra para caminhos exemplificativos de manifesto, resposta HTTP e captura sob demo/execucoes/, sem criar esses arquivos. Templates, script Preparar-Lote, SQL de verificação, amostra PNG e novo documento não receberam regra de ignore. Manifesto template lido com ConvertFrom-Json, sem erro. diff --stat não inclui arquivos não rastreados; o inventário usa também status --untracked-files=all.
+
+Não foram executados scripts de provisionamento, SQL, conexões, HTTP, chamadas externas, testes, build, restore ou migrações. Nenhum arquivo foi excluído ou alterado fora de backend/. Nenhuma operação Git de escrita foi executada. SQL continua sem compilação/validação de execução; baseline físico, janela exclusiva, igualdade temporal e correlação dos cinco eventos permanecem pendentes de autorização e execução real. Nenhum resultado esperado foi promovido a observado.

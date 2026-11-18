@@ -1,0 +1,40 @@
+{
+  "estado": "PLANO_NAO_EXECUTADO",
+  "marcadorFormato": "TASK007-DEMO-<32 hexadecimais minusculos>",
+  "sufixarNomesComMarcador": true,
+  "bairros": [
+    { "chave": "centro", "nomeBase": "Teste Centro", "subprefeitura": "Subprefeitura exclusivamente fictícia" },
+    { "chave": "norte", "nomeBase": "Teste Norte", "subprefeitura": "Subprefeitura exclusivamente fictícia" }
+  ],
+  "categorias": [
+    { "chave": "lixeira", "nomeBase": "Lixeira cheia" },
+    { "chave": "descarte", "nomeBase": "Descarte irregular" },
+    { "chave": "buraco", "nomeBase": "Buraco" },
+    { "chave": "iluminacao", "nomeBase": "Iluminação" }
+  ],
+  "ocorrencias": [
+    { "chave": "A", "bairro": "centro", "categoria": "descarte", "descricaoTemplate": "Demonstração fictícia {MARCADOR}; cenário A sem dados pessoais.", "estadoFinal": "ABERTA", "historicosEsperados": 0 },
+    { "chave": "B", "bairro": "centro", "categoria": "lixeira", "descricaoArquivo": "amostras/relato-pii.template.txt", "estadoFinal": "EM_ANALISE", "historicosEsperados": 1 },
+    { "chave": "C", "bairro": "norte", "categoria": "buraco", "descricaoTemplate": "Demonstração fictícia {MARCADOR}; cenário C sem dados pessoais.", "estadoFinal": "RESOLVIDA", "historicosEsperados": 2 }
+  ],
+  "dispositivos": [
+    { "chave": "comLeitura", "bairro": "centro", "nomeBase": "Sensor fictício com leitura", "local": "Ponto exclusivamente fictício Centro" },
+    { "chave": "semLeitura", "bairro": "norte", "nomeBase": "Sensor fictício sem leitura", "local": "Ponto exclusivamente fictício Norte" }
+  ],
+  "leituras": [
+    { "dispositivo": "comLeitura", "nivelPercentual": 89.99, "nivelCriticoEsperado": false },
+    { "dispositivo": "comLeitura", "nivelPercentual": 90.00, "nivelCriticoEsperado": true },
+    { "dispositivo": "comLeitura", "nivelPercentual": 90.01, "nivelCriticoEsperado": true }
+  ],
+  "imagens": [
+    { "chave": "png", "ocorrencia": "B", "arquivo": "amostras/pixel-ficticio.png", "mime": "image/png", "tituloTemplate": "{MARCADOR} PNG" },
+    { "chave": "jpeg", "ocorrencia": "B", "arquivo": "amostras/pixel-ficticio.jpeg", "mime": "image/jpeg", "tituloTemplate": "{MARCADOR} JPEG" }
+  ],
+  "executorImagem": "VictorHugoDePaula_RM554787",
+  "rmLiderEsperadoServidor": "554787",
+  "deltasEsperadosNaoComprovados": { "BAIRRO": 2, "CATEGORIA_OCORRENCIA": 4, "OCORRENCIA": 3, "HISTORICO_STATUS": 3, "IMAGEM_OCORRENCIA": 2, "DISPOSITIVO": 2, "LEITURA_SENSOR": 3, "EVENTO_SEGURANCA": 5, "MENSAGEM_RISCO": 0 },
+  "totalPlanejado": 24,
+  "eventosPiiPlanejados": ["CPF", "TELEFONE", "EMAIL", "SENHA", "SAUDE"],
+  "pontuacaoBrutaNovaPlanejada": 30,
+  "quantidadePiiComprovadaPorExecucao": false
+}

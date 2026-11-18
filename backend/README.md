@@ -1,4 +1,12 @@
-# ZelaSP — Backend / TASK-001 a TASK-006
+# ZelaSP — Backend / TASK-001 a TASK-006 e preparação offline TASK-007
+
+## TASK-007 — Demonstração preparada, ainda não executada
+
+Artefatos em [demo/README.md](demo/README.md): plano de 24 registros fictícios, manifesto sem IDs/resultados observados, preparador exclusivamente local, SQL de referências separado das consultas de leitura, procedimentos HTTP manuais, roteiro T01–T10/índice E01–E09 e reinício/renderização de imagens. O relato de PII tem 173 caracteres com marcador válido e expectativa protegida de 186; foi revisado estaticamente para cinco categorias, **sem executar o detector ou comprovar quantidade de eventos**. Amostras PNG/JPEG são cópias das fixtures próprias, com comprimentos e hashes locais registrados.
+
+Nenhum script do pacote, teste, build/restore, SQL, API, OpenAI ou ESP32 foi executado nesta fase. O estado físico atual de ZelaSP_Dev é desconhecido; não usar contagens/IDs históricos como baseline. SQLs têm destino/autorizações/parâmetros/guardas explícitos; nenhuma autorização anterior é reutilizada. O preparador não conecta nem envia requests, não sobrescreve lote existente e conserva permissões de execução como pendentes. Não há provisionamento no startup/migrações.
+
+Execução local, conexão SQL de leitura, criação de referências, mutações HTTP e reinícios exigem aprovações posteriores separadas. Sem limpeza/reparação/retry automático, alterações de schema ou correções Mobile. [Incompatibilidades Mobile](demo/COMPATIBILIDADE_MOBILE.md) impedem afirmar integração ponta a ponta pronta; usar cliente HTTP independente quando autorizado. T/E oficiais, DER/dicionário/relatório final e capturas reais permanecem pendentes de conferência documental/execução. A última suíte histórica é 317 aprovados/um SQL ignorado, não repetida nesta preparação. Ver [evidências planejadas](demo/EVIDENCIAS.md) e VALIDACAO.md.
 
 ## Dispositivos e leituras — TASK-006
 
