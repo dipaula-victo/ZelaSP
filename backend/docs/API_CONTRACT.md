@@ -1,4 +1,4 @@
-# ZelaSP — Contrato REST v1 / TASK-002 a TASK-004
+# ZelaSP — Contrato REST v1 / TASK-002 a TASK-005
 
 Contrato para integração Mobile. Endereço local de exemplo: `http://localhost:5187`. OpenAPI disponível em Development: `GET /openapi/v1.json`. Exemplos abaixo usam exclusivamente dados fictícios; os identificadores dependem do banco de destino.
 
@@ -22,6 +22,7 @@ Contrato para integração Mobile. Endereço local de exemplo: `http://localhost
 | GET | `/api/ocorrencias/{id}` | 200, ocorrência | 400, 404, 500 |
 | PATCH | `/api/ocorrencias/{id}/status` | 200, ocorrência atualizada | 400, 404, 409, 500 |
 | GET | `/api/ocorrencias/{id}/historico` | 200, array de histórico | 400, 404, 500 |
+| GET | `/api/risco-cidadao` | 200, indicador global e explicação | 500 |
 
 O framework pode retornar 405 para método não suportado e 415 para Content-Type incompatível. IDs de rota inteiros não positivos retornam 400; rotas com ID não interpretável como int32 não correspondem ao endpoint e retornam 404.
 
@@ -223,7 +224,7 @@ O framework pode acrescentar `type`, `instance` e `traceId`. O cliente deve usar
 
 O teste sequencial SQL Server de persistência/rollback de ocorrências foi executado na TASK-002 sob autorização específica, conforme VALIDACAO.md. O procedimento em [SQLSERVER_INTEGRATION.md](SQLSERVER_INTEGRATION.md) continua exigindo autorização para qualquer nova execução. A concorrência foi verificada localmente com SQLite, sem ser tratada como prova de locking SQL Server.
 
-TASK-004 integra detecção/mascaramento de PII no serviço de ocorrências e grava metadados técnicos em EVENTO_SEGURANCA, sem gravar valores pessoais originais nos eventos. Não há LLM, Taint Analysis completo, autenticação ou geração de MENSAGEM_RISCO nesta etapa.
+TASK-004 integra detecção/mascaramento de PII no serviço de ocorrências e grava metadados técnicos em EVENTO_SEGURANCA, sem gravar valores pessoais originais nos eventos. Na TASK-004 não havia LLM. A TASK-005 descrita abaixo acrescenta adapter HTTP e análise manual source/transform/sink, sem autenticação ou gravação de MENSAGEM_RISCO.
 
 ### Proteção de descricao — TASK-004
 
@@ -360,3 +361,61 @@ Todas as respostas de erro acima usam `application/problem+json`, sem bytes, sta
 O Mobile deve enviar somente os quatro campos, usar o ID/Location retornado, consultar os metadados e buscar o binário separadamente. Manter o limite de 2 MiB no cliente melhora a experiência, mas não substitui a validação do servidor. Executor não deve ser apresentado como usuário autenticado; RmLider não deve ser enviado. A API pode retornar primeiro um erro de formato antes da verificação de existência se houver mais de uma entrada inválida.
 
 Os novos testes comprovam persistência/recuperação em SQLite real e temporário. A validação real SQL Server foi concluída em lote único autorizado: dois uploads 201, GETs 200, bytes e hashes confirmados por consulta independente, sem alterar estado ou histórico da ocorrência. A autorização foi consumida; novas escritas exigem nova aprovação. O procedimento e seu resultado histórico estão em [IMAGENS_SQLSERVER_INTEGRATION.md](IMAGENS_SQLSERVER_INTEGRATION.md) e não autorizam repetição do lote.
+
+## TASK-005 — GET /api/risco-cidadao
+
+Consulta global, sem body, parâmetros de rota ou filtros definidos. Resposta 200 application/json; falha de consulta/cálculo: 500 application/problem+json sem detalhes internos. Falha/configuração ausente da IA não é erro do indicador: 200 com explicação determinística. Cancelamento do chamador é propagado. Sem autenticação ou escopo individual nesta etapa.
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| pontuacao | int32 | 0–100, calculado localmente |
+| nivel | string | BAIXO 0–19, MEDIO 20–49, ALTO 50–100 |
+| periodoDias | int32 | Sempre 7 |
+| deteccoes | objeto | cpf/telefone/email/senha/saude: inteiros não negativos |
+| vazamentosBloqueados | inteiro não negativo | Um por evento válido, sem duplicar categoria |
+| alertas | array de tipo/texto | Textos fixos exatos do Mobile, uma entrada por categoria presente; VAZAMENTO para bloqueios |
+| janela | objeto | inicioUtc/fimUtc: ISO UTC com Z, limites inclusivos |
+| explicacao | objeto | texto simples e origem LLM ou FALLBACK, separado dos alertas |
+
+Fórmula: min(100, cpf×6 + telefone×3 + email×3 + senha×10 + saude×8 + vazamentosBloqueados×15). Um instante UTC capturado por request determina início=fim−7 dias. Eventos antigos/futuros são excluídos. Somente PII_DETECTADO ou VAZAMENTO_BLOQUEADO com categoria CPF/TELEFONE/EMAIL/SENHA/SAUDE; desconhecidos são ignorados, inclusive categoria desconhecida de bloqueio. Eventos de bloqueio não incrementam deteccoes e nenhum produtor novo é implementado. O indicador mede exposição de dados no sistema, não perigo no bairro.
+
+Exemplo ilustrativo (não é resultado de acesso ao SQL Server):
+
+```http
+GET /api/risco-cidadao
+Accept: application/json
+```
+
+```json
+{
+  "pontuacao": 25,
+  "nivel": "MEDIO",
+  "periodoDias": 7,
+  "deteccoes": { "cpf": 2, "telefone": 1, "email": 0, "senha": 1, "saude": 0 },
+  "vazamentosBloqueados": 0,
+  "alertas": [
+    { "tipo": "CPF", "texto": "Um CPF foi digitado em um relato e foi ocultado. O CPF pode ser usado em fraudes: não o informe em relatos." },
+    { "tipo": "TELEFONE", "texto": "Um telefone foi digitado em um relato e foi ocultado. Evite informar telefone em relatos." },
+    { "tipo": "SENHA", "texto": "Uma senha foi digitada em um relato e foi ocultada. Se for sua, troque-a agora." }
+  ],
+  "janela": { "inicioUtc": "2026-11-10T12:00:00Z", "fimUtc": "2026-11-17T12:00:00Z" },
+  "explicacao": {
+    "texto": "O indicador está em nível MEDIO e soma 25 pontos nos últimos sete dias. Informações pessoais foram detectadas ou tiveram seu envio bloqueado. Evite incluí-las nos relatos. O indicador não representa perigo no bairro.",
+    "origem": "FALLBACK"
+  }
+}
+```
+
+Textos adicionais, quando a categoria está presente:
+
+| tipo | texto exato |
+|---|---|
+| EMAIL | Um e-mail foi digitado em um relato e foi ocultado. Evite informar e-mail em relatos. |
+| SAUDE | Uma informação de saúde foi digitada em um relato e foi ocultada. Dados de saúde são sensíveis: não os informe. |
+| VAZAMENTO | O sistema impediu que um dado pessoal aparecesse em um local inseguro. |
+
+Ordem dos alertas: CPF, TELEFONE, EMAIL, SENHA, SAUDE, VAZAMENTO, omitindo ausentes. Banco sem eventos reconhecidos: 0/BAIXO, contagens zero e alertas vazios, com explicação segura. Não existe campo com evento individual, descrição ou PII original nesta resposta.
+
+Compatibilidade: parseRisk atual do Mobile recebe todos os campos anteriores e seus textos exatos; aceita campos extras janela/explicacao. A tela atual continua exibindo alertas fixos e ainda não mostra explicacao; sua adaptação é responsabilidade de tarefa Mobile futura, sem alteração nesta entrega. Não substituir alertas por geração dinâmica. Nenhum teste ponta a ponta Mobile foi executado nesta task.
+
+A explicação da IA é transitória e não autoritativa. O modelo não altera pontuação, nível, contagens ou janela, nem mensagens fixas. GET não executa INSERT/UPDATE/DELETE ou SaveChanges, inclusive quando consulta a IA; MENSAGEM_RISCO permanece sem alterações. Configuração/política de habilitação e limitações em README e [TAINT_ANALYSIS.md](TAINT_ANALYSIS.md). Integração HTTP implementada com handler simulado nos testes, sem chamada real autorizada ou executada.

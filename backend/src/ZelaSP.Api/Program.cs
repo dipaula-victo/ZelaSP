@@ -9,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 // these categories until a structured, sanitized diagnostic pipeline is implemented.
 builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.None);
 builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.None);
+builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.None);
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.AllowInputFormatterExceptionMessages = false;
@@ -43,6 +44,11 @@ builder.Services.AddScoped<OcorrenciasService>();
 builder.Services.AddSingleton(new EquipeAcademica(builder.Configuration["Academico:RmLider"] ?? "",
     builder.Configuration.GetSection("Academico:Executores").Get<string[]>() ?? []));
 builder.Services.AddScoped<ImagensService>();
+builder.Services.Configure<RiscoAiOptions>(builder.Configuration.GetSection("RiscoAi"));
+builder.Services.AddHttpClient<IExplicacaoCidadaClient, OpenAiExplicacaoCidadaClient>(http => http.Timeout = System.Threading.Timeout.InfiniteTimeSpan)
+    .RemoveAllLoggers()
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false, UseCookies = false });
+builder.Services.AddScoped<RiscoCidadaoService>();
 var app = builder.Build();
 app.UseExceptionHandler(new ExceptionHandlerOptions { SuppressDiagnosticsCallback = _ => true });
 app.UseStatusCodePages();

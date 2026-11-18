@@ -1,6 +1,6 @@
-# Evidências de validação — TASK-001 a TASK-004
+# Evidências de validação — TASK-001 a TASK-005
 
-**Estado atual (17/11/2026): TASK-004 corrigida após revisão de rótulos em senhas; 203 testes locais aprovados, um SQL Server ignorado, build sem erros/avisos e EF sem diferenças pendentes.** Ver a última seção. Nenhum acesso SQL Server nesta task. As seções anteriores registram etapas históricas, inclusive as provas reais autorizadas das TASKs 002/003; essas autorizações não foram reutilizadas.
+**Estado atual (17/11/2026): TASK-005 implementada para Code Review; 253 testes locais aprovados, um SQL Server ignorado, build sem erros/avisos e EF sem diferenças pendentes.** Ver a última seção. Nenhum acesso SQL Server nesta task. As seções anteriores registram etapas históricas, inclusive as provas reais autorizadas das TASKs 002/003; essas autorizações não foram reutilizadas.
 
 Execução em 14/11/2026, Windows, SDK 10.0.202, runtime 10.0.6. Nenhuma conexão ou escrita SQL executada. Todos os arquivos do projeto criados somente em `backend/`. Os caches globais de ferramentas/pacotes do SDK foram utilizados com permissão do ambiente; não são alterações no conteúdo do monorepo.
 
@@ -825,3 +825,89 @@ dotnet ef migrations has-pending-model-changes --project src/ZelaSP.Infrastructu
 Resultado final exit 0: No changes have been made to the model since the last migration. Nenhuma alteração em entidades, schema, InitialCreate, snapshot, migrações ou dependências. Executado git diff --check após os documentos; sem problemas de whitespace. Git somente leitura.
 
 Arquivos modificados nesta revisão: src/ZelaSP.Application/ProtecaoPii.cs, tests/ZelaSP.Tests/ProtecaoPiiTests.cs, tests/ZelaSP.Tests/PiiApiTests.cs, README.md, VALIDACAO.md, prompts.md. As demais alterações da TASK-004 precedem esta revisão e foram preservadas. Limitações heurísticas e de delimitadores continuam documentadas; texto adicional dentro do valor não é presumido público. Nenhum Mobile/outro diretório alterado, nenhuma escrita SQL, commit/push/pull/merge, dependência nova ou TASK-005. Aguarda revisão do Product Manager.
+## TASK-005 — Indicador Risco Cidadão e adapter OpenAI — 17/11/2026
+
+### Autorização, inspeção e escopo
+
+Proposta aprovada pelo PM para feature/task-005-citizen-risk-ai. Branch conferida antes de editar; working tree inicialmente limpo. Inspecionados EVENTO_SEGURANCA, MENSAGEM_RISCO, Fluent API, InitialCreate/snapshot, arquitetura, contratos e documentação backend, tipos/parser/tela/alertas do Mobile. Não se alterou Mobile. Mensagem agregada não é persistida nem associada artificialmente a evento; FK obrigatória e única de MENSAGEM_RISCO preservada. Nenhum schema, migração, entidade existente ou dependência foi alterado.
+
+Implementado GET /api/risco-cidadao, global e somente leitura. Janela de sete dias UTC com início/fim inclusivos e exclusão de futuros. Pesos 6/3/3/10/8 por CPF/TELEFONE/EMAIL/SENHA/SAUDE; bloqueio vale apenas 15, sem incrementar categoria. Eventos e categorias desconhecidos são ignorados, inclusive categoria desconhecida em VAZAMENTO_BLOQUEADO. Não há produtor de bloqueios. Pontuação satura em 100, com proteção de overflow, e classes BAIXO 0–19, MEDIO 20–49, ALTO 50–100. Pontos/classificação não dependem da IA.
+
+Consulta EF agrupa no banco com AsNoTracking e projeta somente tipo/categoria/contagem; nunca carrega descrição, origem/destino/ação livres, IDs ou imagens. Vocabulário é exato: collation BIN2 e DATALENGTH no SQL Server impedem equivalências de caixa/acentos/padding; SQLite usa comparações/tamanhos correspondentes. Não há índice temporal novo ou alteração de collation do banco.
+
+Resposta preserva pontuacao/nivel/periodoDias/deteccoes/vazamentosBloqueados/alertas, com textos fixos exatos do Mobile. Acrescenta janela e explicacao separadamente. Parser atual permite esses campos, mas a tela Mobile ainda não renderiza explicacao. Testes verificam formato e comparam alertas ao arquivo real Mobile; não foi executado aplicativo/parser TypeScript ponta a ponta.
+
+### Adapter HTTP e barreiras
+
+OpenAI Responses API com HttpClient por DI, endpoint fixo https://api.openai.com/v1/responses, modelo padrão gpt-4.1-mini configurável. Sem SDK/pacote novo; integração Enabled=false por padrão. API key ausente dos arquivos de configuração versionados; apenas sentinela explicitamente fictícia nos testes. Não foi solicitado, configurado, impresso ou utilizado segredo real.
+
+O contrato do cliente recebe só ResumoRiscoAi com números e enum de nível. O payload é reconstruído por allowlist, com instructions constantes, input agregado, store=false, stream=false, max_output_tokens=300 e text.format json_schema estrito com uma propriedade texto. Nenhum relato (original ou mascarado), evento completo, metadado livre, executor/RM, nome, ID, imagem ou informação médica original é enviado. Referência oficial do protocolo consultada por leitura pública, com link em docs/TAINT_ANALYSIS.md; isso não é chamada de inferência.
+
+Timeout de cinco segundos inclui headers/corpo; sem retries, redirects ou cookies. Limite de corpo 32 KiB, inclusive sem Content-Length, e explicação 1–600 caracteres em texto simples; envelope completed, sem erro/recusa e JSON somente texto. Saída com PII reconhecida/markup/links/controles ou formato inválido é descartada. Falha HTTP/rede, timeout, configuração ausente/inválida e resposta inválida retornam ausência de texto, e Application usa fallback determinístico. Cancelamento do cliente é propagado; falha de banco não vira risco zero. Loggers da factory HTTP removidos e categoria filtrada; nenhum prompt, header de autorização, corpo ou resposta é registrado pelo adapter.
+
+### Comandos realmente executados
+
+Na raiz, conferida ausência de ZELASP_SQLSERVER_TASK002_WRITE_AUTHORIZATION antes das suítes; nunca habilitada nesta task:
+
+```powershell
+dotnet build backend/ZelaSP.sln --no-restore
+dotnet test backend/ZelaSP.sln --no-build --no-restore --filter 'FullyQualifiedName~Risco'
+dotnet test backend/tests/ZelaSP.Tests --no-restore --filter 'FullyQualifiedName~RiscoSqlServerProjectionTests'
+dotnet test backend/ZelaSP.sln --no-build --no-restore
+```
+
+Builds incrementais todos com exit 0, zero erros/avisos. Primeiros 46 novos casos passaram. Diagnóstico offline adicional inicialmente falhou por parâmetro Functions já extraído pelo EF, ainda sem contexto de valores no helper; duas tentativas de diagnóstico identificaram esse parâmetro. Corrigido somente o helper para vincular EF.Functions como constante, sem copiar/alterar a query de produção para satisfazer o teste. Execução isolada passou com zero tentativas de conexão. Acrescentados três casos de configuração/stream/modelo.
+
+Última suíte completa: **253 aprovados, zero falhas, um SQL Server ignorado, 254 totais**, exit 0. Os 203 anteriores foram preservados integralmente e continuam aprovados; nenhum teste anterior foi editado. São 50 novos casos: 16 de cálculo, 28 do adapter e validação, cinco HTTP/SQLite e um de tradução SQL Server offline. Timeout real local de cinco segundos e cancelamento foram exercitados com handler simulado.
+
+Em backend/:
+
+```powershell
+dotnet ef migrations has-pending-model-changes --project src/ZelaSP.Infrastructure --startup-project src/ZelaSP.Infrastructure --no-build
+```
+
+Exit 0: No changes have been made to the model since the last migration. Não houve aplicação/geração de migração. Restore não foi necessário/executado: projetos/dependências inalterados e caches existentes resolveram build/testes. Ferramentas usaram bin/obj sem exclusão ou limpeza.
+
+Git somente leitura: branch --show-current, status --short, diff --stat, diff --name-only e diff --check. Conferência final de whitespace sem problemas; nenhum arquivo de Mobile, DbContext ou migrações apareceu nas alterações. Nenhuma operação Git de alteração, commit, push, pull, merge ou nova branch.
+
+### Evidências e limites dos testes
+
+- Pesos, soma/repetições, 0/19/20/49/50/100, saturação de long.MaxValue e rejeição de contagem negativa.
+- SQLite real: limites inclusivos, futuros/antigos, vocabulário desconhecido/caixa/espaços finais, banco vazio e ausência de tracking.
+- GET real via TestServer e adapter HTTP simulado: seis eventos válidos geram 45 pontos/MEDIO, todos os alertas Mobile e explicação LLM ou FALLBACK. Bloqueio de SENHA conta só 15. Um SELECT agrega eventos, sem leitura de ocorrência ou campos livres. Interceptor impede escrita; verificações independentes confirmam seis eventos preservados, uma ocorrência preservada e zero mensagens.
+- Relato legado e campos de auditoria contêm sentinelas exclusivamente fictícias; o handler externo exige sua ausência e ausência de CPF/e-mail/senha/saúde fictícios, executor/RM/ID/metadados de imagem no request.
+- Adapter: método/endpoint/schema/flags e campos exatos do agregado, configuração desabilitada/ausente/inválida, modelo configurável, HTTP 429, rede, JSON/estrutura inválidos, recusa/incomplete, campo pontuacao indevido, saída longa, PII nas cinco categorias, markup/URL, timeout e cancelamento. Stream sem tamanho é interrompido em 32769 bytes, sem carregar arquivo/corpo arbitrariamente grande.
+- SQL Server: somente geração offline da expressão real do store com COUNT_BIG/GROUP BY/limites/collation/DATALENGTH, sem origens/destinos/ocorrências no SQL. Interceptor exige zero aberturas de conexão. Isso comprova tradução, não execução no SQL Server.
+
+### Inventário TASK-005
+
+Novos (11):
+- src/ZelaSP.Domain/CalculadoraRiscoCidadao.cs
+- src/ZelaSP.Application/ContratosRisco.cs
+- src/ZelaSP.Application/RiscoCidadaoService.cs
+- src/ZelaSP.Infrastructure/RiscoCidadaoStore.cs
+- src/ZelaSP.Infrastructure/OpenAiExplicacaoCidadaClient.cs
+- src/ZelaSP.Api/Controllers/RiscoCidadaoController.cs
+- tests/ZelaSP.Tests/RiscoCidadaoTests.cs
+- tests/ZelaSP.Tests/RiscoAiTests.cs
+- tests/ZelaSP.Tests/RiscoApiTests.cs
+- tests/ZelaSP.Tests/RiscoSqlServerProjectionTests.cs
+- docs/TAINT_ANALYSIS.md
+
+Modificados (8):
+- src/ZelaSP.Infrastructure/DependencyInjection.cs
+- src/ZelaSP.Api/Program.cs
+- src/ZelaSP.Api/appsettings.json
+- src/ZelaSP.Api/ContratoOpenApiTransformer.cs
+- README.md
+- docs/API_CONTRACT.md
+- VALIDACAO.md
+- prompts.md
+
+Total 19 arquivos, todos backend/, sem exclusões. Nenhum arquivo de projeto/pacote, entidade existente, InitialCreate, snapshot ou script DDL alterado. Apenas uma classe de regras/contagens no Domain foi adicionada, sem integrar novas entidades ao modelo EF.
+
+### Pendências para Code Review
+
+Integração HTTP implementada; testes usam exclusivamente HttpMessageHandler simulado. **Nenhuma chamada real à OpenAI ou acesso SQL Server foi executado**. Habilitação remota com credencial real depende de nova autorização e revisão de configuração/termos do provedor. Não se apresenta simulação como prova de integração remota aceita. Não existe gravação em MENSAGEM_RISCO ou produtor de bloqueios. Nenhuma funcionalidade IoT ou TASK-006 iniciada.
+
+Análise source/transform/sink, barreiras e riscos residuais em docs/TAINT_ANALYSIS.md. O detector de saída é heurístico e não valida toda semântica/PII inventada pelo modelo; a IA não altera o resultado autoritativo. Indicador é global sem autenticação, não mede perigo no bairro. Sem índice temporal, cache ou rate limit de inferências: volume/custo deverão ser avaliados antes de habilitação ampla. Mobile precisa de tarefa própria para exibir a nova explicação. Aguarda Code Review do PM/Arquiteto antes de commit.
