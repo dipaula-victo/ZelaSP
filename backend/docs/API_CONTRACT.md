@@ -1,4 +1,4 @@
-# ZelaSP — Contrato REST v1 / TASK-002 e TASK-003
+# ZelaSP — Contrato REST v1 / TASK-002 a TASK-004
 
 Contrato para integração Mobile. Endereço local de exemplo: `http://localhost:5187`. OpenAPI disponível em Development: `GET /openapi/v1.json`. Exemplos abaixo usam exclusivamente dados fictícios; os identificadores dependem do banco de destino.
 
@@ -223,7 +223,13 @@ O framework pode acrescentar `type`, `instance` e `traceId`. O cliente deve usar
 
 O teste sequencial SQL Server de persistência/rollback de ocorrências foi executado na TASK-002 sob autorização específica, conforme VALIDACAO.md. O procedimento em [SQLSERVER_INTEGRATION.md](SQLSERVER_INTEGRATION.md) continua exigindo autorização para qualquer nova execução. A concorrência foi verificada localmente com SQLite, sem ser tratada como prova de locking SQL Server.
 
-Cybersecurity deverá integrar detecção/sanitização de PII e demais mecanismos em tarefas próprias. Os DTOs e o serviço de aplicação são os pontos de entrada para essa integração; não foram adicionados detectores, LLMs, fluxos de IA ou escrita em EVENTO_SEGURANCA/MENSAGEM_RISCO. Auditoria técnica não substitui autenticação futura de usuários.
+TASK-004 integra detecção/mascaramento de PII no serviço de ocorrências e grava metadados técnicos em EVENTO_SEGURANCA, sem gravar valores pessoais originais nos eventos. Não há LLM, Taint Analysis completo, autenticação ou geração de MENSAGEM_RISCO nesta etapa.
+
+### Proteção de descricao — TASK-004
+
+O JSON público continua o mesmo. O servidor substitui trechos reconhecidos por `[CPF OCULTADO]`, `[TELEFONE OCULTADO]`, `[E-MAIL OCULTADO]`, `[SENHA OCULTADA]` ou `[SAÚDE OCULTADA]` antes do INSERT e da resposta 201. As respostas de detalhe, lista e PATCH também protegem descrições legadas sem modificar registros. O cliente deve exibir a descrição retornada e não presumir igualdade com o texto enviado. Não enviar dados reais em demonstrações.
+
+O limite de 4000 caracteres vale para a entrada e para a descrição protegida no POST; expansão acima do limite retorna 400 com `errors.descricao`, sem INSERT de ocorrência/eventos. Erros automáticos de binding/validação usam `errors.request` com mensagem fixa, sem ecoar valores ou nomes arbitrários de campos. Códigos HTTP, DTOs, status inicial, origem, datas e Location permanecem preservados. Regras, precedência e limitações de reconhecimento estão no README; não há promessa de sanitização de imagens ou metadados de upload.
 
 ## TASK-003 — Imagens de ocorrências
 
