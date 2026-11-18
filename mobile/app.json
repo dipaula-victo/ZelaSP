@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "ZelaSP",
+    "slug": "zelasp-mobile",
+    "version": "1.2.0",
+    "orientation": "portrait",
+    "scheme": "zelasp",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "br.com.zelasp.mobile"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permita escolher uma foto para registrar o problema de limpeza urbana.",
+          "cameraPermission": "Permita tirar uma foto do problema de limpeza urbana.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-status-bar",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
