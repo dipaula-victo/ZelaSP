@@ -5,3 +5,6 @@
 .env
 appsettings.Local.json
 TestResults/
+
+# Resultados locais; templates, scripts, documentos e amostras ficam fora desta regra.
+/demo/execucoes/
