@@ -49,6 +49,7 @@ builder.Services.AddHttpClient<IExplicacaoCidadaClient, OpenAiExplicacaoCidadaCl
     .RemoveAllLoggers()
     .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false, UseCookies = false });
 builder.Services.AddScoped<RiscoCidadaoService>();
+builder.Services.AddScoped<IoTService>();
 var app = builder.Build();
 app.UseExceptionHandler(new ExceptionHandlerOptions { SuppressDiagnosticsCallback = _ => true });
 app.UseStatusCodePages();

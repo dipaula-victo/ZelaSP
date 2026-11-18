@@ -1,4 +1,4 @@
-# ZelaSP — Contrato REST v1 / TASK-002 a TASK-005
+# ZelaSP — Contrato REST v1 / TASK-002 a TASK-006
 
 Contrato para integração Mobile. Endereço local de exemplo: `http://localhost:5187`. OpenAPI disponível em Development: `GET /openapi/v1.json`. Exemplos abaixo usam exclusivamente dados fictícios; os identificadores dependem do banco de destino.
 
@@ -9,7 +9,7 @@ Contrato para integração Mobile. Endereço local de exemplo: `http://localhost
 - Datas: ISO 8601 em UTC, com sufixo `Z`. O servidor define os horários; SQL Server armazena `datetime2(3)`. Não enviar datas nos requests.
 - Não há autenticação de usuários nesta etapa. No histórico de ocorrências, `executor` é um identificador técnico de configuração do servidor. Nas imagens, é uma declaração acadêmica do cliente validada contra a equipe oficial; nenhum deles autentica uma pessoa.
 - Nos endpoints de ocorrências, POST/PATCH rejeitam campos extras: cliente não envia `id`, `status` inicial, `origem`, `criadaEm`, `executor` ou campos de histórico. O contrato de imagens da TASK-003, ao final, define seu próprio campo executor obrigatório.
-- Ocorrências não exigem fotografia. O upload separado está na seção TASK-003; não há criação de bairros/categorias ou integração de sensores nesta entrega.
+- Ocorrências não exigem fotografia. Upload separado está na TASK-003; integração de dispositivos/leituras está na TASK-006. Não há criação de bairros/categorias/dispositivos ou ocorrências automáticas nesta entrega.
 
 ## Endpoints
 
@@ -23,6 +23,8 @@ Contrato para integração Mobile. Endereço local de exemplo: `http://localhost
 | PATCH | `/api/ocorrencias/{id}/status` | 200, ocorrência atualizada | 400, 404, 409, 500 |
 | GET | `/api/ocorrencias/{id}/historico` | 200, array de histórico | 400, 404, 500 |
 | GET | `/api/risco-cidadao` | 200, indicador global e explicação | 500 |
+| GET | `/api/dispositivos` | 200, dispositivos e última leitura | 500 |
+| POST | `/api/leituras` | 201, leitura registrada, sem Location | 400, 404, 413, 415, 500 |
 
 O framework pode retornar 405 para método não suportado e 415 para Content-Type incompatível. IDs de rota inteiros não positivos retornam 400; rotas com ID não interpretável como int32 não correspondem ao endpoint e retornam 404.
 
@@ -419,3 +421,117 @@ Ordem dos alertas: CPF, TELEFONE, EMAIL, SENHA, SAUDE, VAZAMENTO, omitindo ausen
 Compatibilidade: parseRisk atual do Mobile recebe todos os campos anteriores e seus textos exatos; aceita campos extras janela/explicacao. A tela atual continua exibindo alertas fixos e ainda não mostra explicacao; sua adaptação é responsabilidade de tarefa Mobile futura, sem alteração nesta entrega. Não substituir alertas por geração dinâmica. Nenhum teste ponta a ponta Mobile foi executado nesta task.
 
 A explicação da IA é transitória e não autoritativa. O modelo não altera pontuação, nível, contagens ou janela, nem mensagens fixas. GET não executa INSERT/UPDATE/DELETE ou SaveChanges, inclusive quando consulta a IA; MENSAGEM_RISCO permanece sem alterações. Configuração/política de habilitação e limitações em README e [TAINT_ANALYSIS.md](TAINT_ANALYSIS.md). Integração HTTP implementada com handler simulado nos testes, sem chamada real autorizada ou executada.
+
+## TASK-006 — Monitoramento por dispositivos
+
+Fluxo mínimo sem criação automática de ocorrências, sem autenticação de dispositivos e sem modificação do Mobile. Nenhum evento do Risco Cidadão/IA é gerado por leitura crítica. Regra oficial pura: `nivelCritico = nivelPercentual >= 90.00`.
+
+| Percentual | nivelCritico |
+|---|---|
+| 0.00 | false |
+| 89.99 | false |
+| 90.00 | true |
+| 90.01 | true |
+| 100.00 | true |
+
+### GET /api/dispositivos
+
+Sem parâmetros definidos. HTTP 200 application/json, ordenação nome ASC, id ASC. A última leitura é selecionada por lidaEm DESC, id DESC, sem N+1. Sem dispositivos: `[]`. Sem leituras: `ultimaLeitura: null` (não representa percentual zero).
+
+Exemplo ilustrativo:
+
+```json
+[
+  {
+    "id": 7,
+    "bairroId": 2,
+    "nome": "Sensor fictício Centro",
+    "local": "Ponto de demonstração",
+    "ultimaLeitura": {
+      "id": 31,
+      "nivelPercentual": 95.25,
+      "lidaEm": "2026-11-18T12:00:00.000Z",
+      "nivelCritico": true
+    }
+  },
+  {
+    "id": 8,
+    "bairroId": 2,
+    "nome": "Sensor fictício Norte",
+    "local": "Outro ponto de demonstração",
+    "ultimaLeitura": null
+  }
+]
+```
+
+DispositivoResponse: id/bairroId int32 positivos, nome string até 120, local string até 250, ultimaLeitura objeto ou null. UltimaLeituraResponse: id int32, nivelPercentual decimal, lidaEm UTC, nivelCritico boolean. Não são retornadas entidades ou navegações EF. Falha inesperada: 500 Problem Details genérico.
+
+### POST /api/leituras
+
+Content-Type application/json, JSON UTF-8. Campos obrigatórios únicos:
+
+| Campo | Tipo | Validação |
+|---|---|---|
+| dispositivoId | int32 | Positivo e previamente cadastrado |
+| nivelPercentual | número JSON/decimal | 0–100 inclusivo, até duas casas efetivas |
+
+Sem campos opcionais. Rejeita null, strings numéricas, tipos incompatíveis, JSON inválido, campos desconhecidos/duplicados e valores controlados pelo servidor (`id`, `lidaEm`, `nivelCritico`, `bairroId` etc.). Nomes de campos duplicados são comparados sem distinção de caixa para evitar ambiguidade do model binding. O corpo máximo é 1024 bytes, incluindo whitespace, com ou sem Content-Length. Nenhuma leitura inválida é gravada.
+
+Precisão efetiva é verificada no token original antes da conversão decimal e novamente no serviço. Isso impede que números muito longos sejam arredondados pela desserialização e aceitos indevidamente. 90.0000 é permitido (zeros finais não aumentam precisão); 90.001, 89.999 e 0.90001e2 são rejeitados. Notação científica como 1e2 é permitida se representável e válida. O backend não arredonda valores de preenchimento.
+
+HTTP 201 application/json, sem header Location (não existe GET individual). Resposta:
+
+```json
+{
+  "id": 31,
+  "dispositivoId": 7,
+  "nivelPercentual": 95.25,
+  "lidaEm": "2026-11-18T12:00:00.000Z",
+  "nivelCritico": true
+}
+```
+
+LidaEm é o horário de recebimento/registro no backend, gerado por TimeProvider em UTC e truncado para milissegundos antes de persistir, compatível com datetime2(3). Não é timestamp enviado pelo sensor ou garantia do instante físico de medição. ID é gerado pelo banco e nivelCritico é derivado, sem coluna nova.
+
+| Código | Situação |
+|---|---|
+| 201 | Leitura registrada |
+| 400 | JSON, tipos, campos, intervalo ou precisão inválidos |
+| 404 | Dispositivo não encontrado |
+| 413 | Corpo acima de 1024 bytes |
+| 415 | Content-Type incompatível |
+| 500 | Falha inesperada, sem detalhes internos |
+
+Erros usam application/problem+json; títulos podem variar entre framework/aplicação. Exemplo de validação de precisão:
+
+```json
+{
+  "title": "Um ou mais campos são inválidos.",
+  "status": 400,
+  "errors": {
+    "nivelPercentual": ["Informe no máximo duas casas decimais efetivas, sem arredondamento."]
+  }
+}
+```
+
+### Exemplo HTTP para ESP32 — não executado contra banco real
+
+Endereço e ID são ilustrativos: substituir pelo host/porta acessível da API e por um ID obtido em GET /api/dispositivos. Se a lista estiver vazia, provisionamento precisa de procedimento/autorização separados; este endpoint não cadastra dispositivos.
+
+```http
+POST /api/leituras HTTP/1.1
+Host: 192.0.2.10:5187
+Content-Type: application/json
+Accept: application/json
+Content-Length: 43
+
+{"dispositivoId":7,"nivelPercentual":95.25}
+```
+
+O corpo ASCII acima tem 43 bytes, sem incluir uma quebra de linha extra. A biblioteca HTTP do firmware deve calcular o tamanho real serializado. Usar ponto decimal, até duas casas efetivas e número JSON, sem aspas ou sinal de porcentagem. Não enviar campos de relógio ou nivelCritico.
+
+Configuração de rede: seguir a configuração local existente do backend e definir no firmware a URL base do computador/servidor. `localhost` no ESP32 aponta ao próprio dispositivo. Para teste em rede controlada, o argumento `--urls` pode definir uma interface acessível, por exemplo `http://0.0.0.0:5187`; isso não é a URL a ser cadastrada no ESP32 (usar IP/hostname real). Firewall, conectividade Wi-Fi e eventual HTTPS são responsabilidades do ambiente/firmware; nenhum serviço ou regra foi alterado automaticamente. O exemplo HTTP local não é recomendação de exposição pública sem segurança.
+
+DispositivoId não autentica o equipamento. Não há credenciais, tokens ou idempotência; timeout pode ocorrer após a gravação e repetir POST pode gerar nova leitura. GET da última leitura pode ajudar acompanhamento, mas não comprova sozinho o resultado de uma transmissão específica perdida. Nesta task não há firmware, hardware, ESP32 físico, seed real, gráfico Mobile, automação de ocorrências, alteração de status/histórico ou eventos de segurança derivados do percentual.
+
+Validação desta entrega: HTTP TestServer/SQLite temporário e geração SQL Server offline, sem conexões SQL ou dispositivos físicos. Ver VALIDACAO.md. Uma demonstração real ESP32/SQL Server requer revisão e autorização próprias; não foi executada nesta task.
