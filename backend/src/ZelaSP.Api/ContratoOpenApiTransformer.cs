@@ -14,7 +14,7 @@ public sealed class ContratoOpenApiTransformer : IOpenApiDocumentTransformer, IO
     public Task TransformAsync(OpenApiSchema schema, OpenApiSchemaTransformerContext context, CancellationToken ct)
     {
         var type = context.JsonTypeInfo.Type;
-        if (type == typeof(StatusOcorrencia) || type == typeof(OrigemOcorrencia))
+        if (type == typeof(StatusOcorrencia) || type == typeof(OrigemOcorrencia) || type == typeof(NivelRisco))
         {
             schema.Type = JsonSchemaType.String;
             schema.Enum = Enum.GetNames(type).Select(x => (JsonNode)JsonValue.Create(x)!).ToList();
@@ -46,6 +46,7 @@ public sealed class ContratoOpenApiTransformer : IOpenApiDocumentTransformer, IO
         {
             var contract = (path, method.ToString().ToUpperInvariant()) switch
             {
+                ("/api/risco-cidadao", "GET") => (operation.Summary ?? "Risco Cidadão", operation.Description ?? "Indicador global em sete dias UTC.", """{"pontuacao":0,"nivel":"BAIXO","periodoDias":7,"deteccoes":{"cpf":0,"telefone":0,"email":0,"senha":0,"saude":0},"vazamentosBloqueados":0,"alertas":[],"janela":{"inicioUtc":"2026-11-10T12:00:00Z","fimUtc":"2026-11-17T12:00:00Z"},"explicacao":{"texto":"Nenhum evento reconhecido foi registrado na janela. O indicador não representa perigo no bairro.","origem":"FALLBACK"}}""", (string?)null),
                 ("/api/bairros", "GET") => ("Listar bairros", "Ordenação por nome e id; retorna [] quando vazio.", "[{\"id\":1,\"nome\":\"Bairro fictício\",\"subprefeitura\":\"Subprefeitura fictícia\"}]", (string?)null),
                 ("/api/categorias-ocorrencia", "GET") => ("Listar categorias", "Ordenação por nome e id; retorna [] quando vazio.", "[{\"id\":1,\"nome\":\"Descarte irregular\"}]", null),
                 ("/api/ocorrencias", "POST") => ("Cadastrar ocorrência", "bairroId e categoriaId obrigatórios e positivos, existentes; descricao obrigatória com 1–4000 caracteres. CPF, telefone, e-mail, senha e termos de saúde reconhecidos são mascarados antes da gravação e resposta, com eventos técnicos na mesma unidade atômica. Se o texto protegido exceder 4000 caracteres, retorna 400 sem gravar. Servidor define id, ABERTA, APP e criadaEm UTC. Campos extras são rejeitados. Location aponta ao detalhe.", Ocorrencia, "{\"bairroId\":1,\"categoriaId\":1,\"descricao\":\"Descarte fictício para demonstração.\"}"),
