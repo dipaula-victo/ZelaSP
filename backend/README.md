@@ -8,7 +8,7 @@ Este diretório contém uma implementação única do backend ZelaSP, compartilh
 
 C# contribui para a implementação e o comportamento interno: programação orientada a objetos nas entidades de [Domain](src/ZelaSP.Domain), interfaces como [IOcorrenciasStore](src/ZelaSP.Application/IOcorrenciasStore.cs) e injeção de dependência no [Program.cs](src/ZelaSP.Api/Program.cs). ASP.NET Core Web API recebe as requisições; Entity Framework Core e LINQ implementam o acesso relacional, com operações assíncronas e `CancellationToken` nos serviços e stores.
 
-A contribuição também aparece na persistência dos bytes de imagens e seus metadados, nos streams HTTP, na transação de atualização de status com histórico e nos [testes automatizados](tests/ZelaSP.Tests). A [documentação acadêmica de C#](academico/csharp/README.md) descreve seus artefatos e evidências; provas SQLite e SQL Server mantêm suas identificações próprias, sem presumir nova execução.
+A contribuição também aparece na persistência dos bytes de imagens e seus metadados, nos streams HTTP, na transação de atualização de status com histórico e nos [testes automatizados](tests/ZelaSP.Tests). O [Relatório acadêmico de C# (PDF)](academico/soa/evidencias/RELATORIO_CSHARP_REFERENCIA.pdf) descreve seus artefatos e evidências; provas SQLite e SQL Server mantêm suas identificações próprias, sem presumir nova execução.
 
 ### B. Arquitetura Orientada a Serviços (SOA) e Web Services
 

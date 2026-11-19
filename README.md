@@ -9,7 +9,7 @@ O [README do backend](backend/README.md#backend-compartilhado-entre-as-disciplin
 
 ## C# Software Development — documentação acadêmica
 
-A [documentação específica de C#](backend/academico/csharp/README.md) reúne a preparação acadêmica da disciplina. Cópias destinadas à entrega e evidências históricas são artefatos documentais; não constituem uma segunda implementação independente do backend.
+O [Relatório acadêmico de C# (PDF)](backend/academico/soa/evidencias/RELATORIO_CSHARP_REFERENCIA.pdf) reúne a preparação acadêmica da disciplina. Cópias destinadas à entrega e evidências históricas são artefatos documentais; não constituem uma segunda implementação independente do backend.
 
 ## SOA e Web Services — Global Solution 2026.2 / 3ESPH
 
