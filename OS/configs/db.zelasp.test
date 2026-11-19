@@ -1,0 +1,17 @@
+$TTL 86400
+@   IN  SOA ns1.zelasp.test. admin.zelasp.test. (
+	2026111801
+	3600
+	1800
+	604800
+	86400
+)
+
+@	    IN NS	ns1.zelasp.test.
+
+ns1	    IN A        192.168.56.10
+ct-node     IN A        192.168.56.10
+ct-client   IN A        192.168.56.20
+
+api         IN A        192.168.56.10
+status      IN A        192.168.56.10

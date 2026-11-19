@@ -1,0 +1,14 @@
+[Unit]
+Description=Agente de Infraestrutura e Monitoramento ZelaSP
+After=network.target bind9.service
+
+[Service]
+Type=simple
+User=Djalma_RM555530
+Group=zelasp
+ExecStart=/srv/citizentech/bin/zelasp-agent.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=Mulri-user.target

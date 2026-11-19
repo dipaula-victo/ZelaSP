@@ -1,0 +1,22 @@
+options {
+	directory "/var/cache/bind";
+
+	forwarders {
+	    8.8.8.8;
+	    1.1.1.1;
+	};
+
+	forward only;
+
+	allow-query {
+	    localhost;
+	    192.168.56.0/24;
+	};
+	
+	recursion yes;
+
+	dnssec-validation auto;
+
+	listen-on { any; };
+	listen-on-v6 { any; };
+};
