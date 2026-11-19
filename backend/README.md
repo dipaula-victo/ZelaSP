@@ -1,5 +1,35 @@
 # ZelaSP — Backend / TASK-001 a TASK-006 e preparação offline TASK-007
 
+## Backend compartilhado entre as disciplinas
+
+Este diretório contém uma implementação única do backend ZelaSP, compartilhada por **C# Software Development** e **Arquitetura Orientada a Serviços (SOA) e Web Services**, na Global Solution 2026.2 da FIAP, turma 3ESPH. As disciplinas observam aspectos complementares da mesma solução; não há uma API separada para cada uma.
+
+### A. C# Software Development
+
+C# contribui para a implementação e o comportamento interno: programação orientada a objetos nas entidades de [Domain](src/ZelaSP.Domain), interfaces como [IOcorrenciasStore](src/ZelaSP.Application/IOcorrenciasStore.cs) e injeção de dependência no [Program.cs](src/ZelaSP.Api/Program.cs). ASP.NET Core Web API recebe as requisições; Entity Framework Core e LINQ implementam o acesso relacional, com operações assíncronas e `CancellationToken` nos serviços e stores.
+
+A contribuição também aparece na persistência dos bytes de imagens e seus metadados, nos streams HTTP, na transação de atualização de status com histórico e nos [testes automatizados](tests/ZelaSP.Tests). A [documentação acadêmica de C#](academico/csharp/README.md) descreve seus artefatos e evidências; provas SQLite e SQL Server mantêm suas identificações próprias, sem presumir nova execução.
+
+### B. Arquitetura Orientada a Serviços (SOA) e Web Services
+
+SOA contribui para a estruturação do domínio e a separação de responsabilidades entre API, Application, Domain e Infrastructure. A API disponibiliza serviços REST com contratos HTTP/JSON explícitos, DTOs, códigos de resposta e erros padronizados. A persistência usa SQL Server, com relacionamentos no [DbContext](src/ZelaSP.Infrastructure/ZelaSpDbContext.cs) e evolução de schema registrada nas [migrações](src/ZelaSP.Infrastructure/Migrations).
+
+A documentação automática OpenAPI e os testes dos serviços tornam os contratos verificáveis. O [README específico de SOA](academico/soa/README.md), a [matriz de rastreabilidade](academico/soa/MATRIZ_RASTREABILIDADE.md) e o [catálogo HTTP](academico/soa/ENDPOINTS.md) relacionam os cinco critérios da disciplina à implementação e às evidências existentes. Isso não cria novos endpoints ou regras de negócio.
+
+### C. Complementaridade entre C# e SOA
+
+As mesmas entidades, serviços, controllers, stores, migrações e testes atendem às duas disciplinas. C# enfatiza como o backend é implementado e se comporta; SOA enfatiza como as responsabilidades e os contratos são organizados e oferecidos como serviços. Esses aspectos se sobrepõem e se complementam, sem duplicar a solução ou atribuir exclusividade de uma tecnologia a uma disciplina.
+
+Os recursos HTTP podem ser consumidos por clientes distintos. O aplicativo Mobile é um cliente potencial; a existência de telas ou serviços HTTP não comprova integração completa. Clientes de demonstração e cópias acadêmicas preservam contextos próprios, sem representar backends independentes. As entregas acadêmicas permanecem específicas de cada disciplina, apoiadas no mesmo núcleo funcional.
+
+Os comandos técnicos já registrados abaixo foram preservados. Para a reprodução consolidada a partir da raiz do repositório e suas limitações, consulte também [SOA — reprodução](academico/soa/README.md#reprodução--comandos-não-executados-neste-fechamento). Comandos de etapas históricas não constituem autorização para novas operações no banco.
+
+## Entrada da entrega de SOA
+
+Para descrição, integrantes, reprodução e fechamento de **SOA e Web Services**, consulte [academico/soa/README.md](academico/soa/README.md), a [matriz](academico/soa/MATRIZ_RASTREABILIDADE.md) e as [evidências](academico/soa/EVIDENCIAS.md). O catálogo atual contém **13 operações de negócio**; OpenAPI JSON é publicado em Development. Não foram executados novos testes ou demonstrações na preparação documental de SOA.
+
+As seções abaixo preservam informações e comandos das etapas históricas. Quantidades como dez operações/111 testes e afirmações de funcionalidades ainda ausentes correspondem àquela etapa, não ao estado atual. Não reutilizar comandos históricos de geração/aplicação de migrações como instruções automáticas. As instruções consolidadas e as pendências de publicação estão no README específico de SOA.
+
 ## TASK-007 — Demonstração preparada, ainda não executada
 
 Artefatos em [demo/README.md](demo/README.md): plano de 24 registros fictícios, manifesto sem IDs/resultados observados, preparador exclusivamente local, SQL de referências separado das consultas de leitura, procedimentos HTTP manuais, roteiro T01–T10/índice E01–E09 e reinício/renderização de imagens. O relato de PII tem 173 caracteres com marcador válido e expectativa protegida de 186; foi revisado estaticamente para cinco categorias, **sem executar o detector ou comprovar quantidade de eventos**. Amostras PNG/JPEG são cópias das fixtures próprias, com comprimentos e hashes locais registrados.
