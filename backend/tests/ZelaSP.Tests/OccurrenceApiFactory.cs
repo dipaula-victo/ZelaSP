@@ -16,6 +16,7 @@ internal sealed class OccurrenceApiFactory : WebApplicationFactory<Program>
 {
     private readonly SqliteConnection _connection = new("Data Source=:memory:");
     public HistoryFailureInterceptor Failure { get; } = new();
+    private IInterceptor? _additionalInterceptor;
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -26,15 +27,19 @@ internal sealed class OccurrenceApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<DbContextOptions<ZelaSpDbContext>>();
             services.RemoveAll<IDbContextOptionsConfiguration<ZelaSpDbContext>>();
             services.RemoveAll<ZelaSpDbContext>();
-            services.AddDbContext<ZelaSpDbContext>(o => o.UseSqlite(_connection).AddInterceptors(Failure));
+            services.AddDbContext<ZelaSpDbContext>(o =>
+            {
+                o.UseSqlite(_connection).AddInterceptors(Failure);
+                if (_additionalInterceptor is not null) o.AddInterceptors(_additionalInterceptor);
+            });
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(new FixedClock());
         });
     }
 
-    public static async Task<OccurrenceApiFactory> CreateAsync(bool seedReferences = true)
+    public static async Task<OccurrenceApiFactory> CreateAsync(bool seedReferences = true, IInterceptor? additionalInterceptor = null)
     {
-        var factory = new OccurrenceApiFactory();
+        var factory = new OccurrenceApiFactory { _additionalInterceptor = additionalInterceptor };
         await factory._connection.OpenAsync();
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ZelaSpDbContext>();
