@@ -80,19 +80,18 @@ npx expo export --platform all --output-dir dist-all
 
 ## Prints e vídeo
 
-**Ainda não capturados nesta revisão:** o Chromium do ambiente falhou antes de abrir a página (`socket() failed: Operation not permitted`); o navegador compartilhado retornou conexão recusada para o servidor local. Não foram produzidas evidências visuais fictícias.
+| Início | Ocorrências | Novo relato |
+|---|---|---|
+| <img width="384" height="833" alt="01-inicio" src="https://github.com/user-attachments/assets/81a3b4b2-4509-4adf-96ba-807d38ce2072" /> | <img width="384" height="833" alt="02-ocorrencias" src="https://github.com/user-attachments/assets/a61e7a23-6ef9-46b7-abba-668a965a18e8" /> | <img width="383" height="832" alt="03-novo-relato" src="https://github.com/user-attachments/assets/fbe27f05-4b01-4174-be29-0b918e43d8a3" />
 
-No computador com Chromium/Playwright funcionando:
+| Risco Cidadão | Sobre e ajustes |
+|---|---|
+| <img width="383" height="834" alt="04-risco" src="https://github.com/user-attachments/assets/141eefac-10e4-40c0-82a8-8c3e86ad9ed9" /> | <img width="383" height="834" alt="05-ajustes" src="https://github.com/user-attachments/assets/01e9f828-a837-4c02-ba7d-cd2981694f2f" />
 
-```sh
-npm run export:web
-npx playwright install chromium
-npm run test:web
-```
 
-O script abre um banco isolado, percorre cadastro, mascaramento, status, foto, risco e consulta offline. Gera cinco prints em `docs/screenshots/`, uma gravação WebM em `docs/recordings/` e relatório `docs/browser-test-results.json` se a jornada terminar. **O teste de navegador está preparado, mas não foi executado com sucesso aqui.** Revise a gravação, corte para até 3 minutos se necessário e publique o vídeo em um link acessível ao professor.
+## Vídeo
 
-Imagens esperadas após execução: `01-inicio.png`, `02-cadastro.png`, `03-detalhe.png`, `04-risco.png`, `05-offline.png`. Adicione os prints efetivamente gerados a este README.
+▶️ **Demonstração do app (até 3 min): https://www.youtube.com/watch?v=sm76ImEubtk
 
 **Link do vídeo de entrega:** pendente de gravação/validação e publicação. Não existe link publicado por este pacote.
 
