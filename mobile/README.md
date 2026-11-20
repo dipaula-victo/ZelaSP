@@ -93,7 +93,6 @@ npx expo export --platform all --output-dir dist-all
 
 ▶️ **Demonstração do app (até 3 min): https://www.youtube.com/watch?v=sm76ImEubtk
 
-**Link do vídeo de entrega:** pendente de gravação/validação e publicação. Não existe link publicado por este pacote.
 
 ## Integração e entrega
 
