@@ -91,11 +91,11 @@ npx expo export --platform all --output-dir dist-all
 
 ## Vídeo
 
-▶️ **Demonstração do app (até 3 min): https://www.youtube.com/watch?v=sm76ImEubtk
+▶️ **Demonstração do app (até 3 min)**: https://www.youtube.com/watch?v=sm76ImEubtk
 
 
 ## Integração e entrega
 
-Leia [contrato da API](docs/INTEGRACAO.md), [resultado da validação](docs/VALIDACAO.md) e [roteiro final](docs/ENTREGA.md). A ausência do backend é permitida no enunciado de Mobile; o mock e a persistência local demonstram o módulo. As entregas de C#, Cyber e demais disciplinas têm suas próprias exigências.
+O contrato da API está em [backend/docs/API_CONTRACT.md](../backend/docs/API_CONTRACT.md).
 
 A instrução da atividade enviada informa entrega por um integrante até **19/11, às 23h55**; o cabeçalho mostra 23h59. Adote 23h55 como prazo conservador. Repositório público ou com acesso liberado ao professor; commits posteriores ao prazo não contam.
