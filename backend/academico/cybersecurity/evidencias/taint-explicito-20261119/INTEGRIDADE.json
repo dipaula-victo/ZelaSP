@@ -1,0 +1,36 @@
+{
+  "excludesSelf": true,
+  "scope": "Validated source files and execution logs; paths relative to repository root",
+  "files": [
+    {
+      "path": "backend/src/ZelaSP.Application/TextoClassificado.cs",
+      "bytes": 3123,
+      "sha256": "F9B4FBAB67AF2903A9132B87123BA6F594596B3F7014FFAD9C8CF7AF923E692B"
+    },
+    {
+      "path": "backend/src/ZelaSP.Application/RiscoCidadaoService.cs",
+      "bytes": 3085,
+      "sha256": "01B0A8D5850F4B39C53A0E548C98744778A74C6180417873CA531D556E07E49E"
+    },
+    {
+      "path": "backend/tests/ZelaSP.Tests/TextoClassificadoTests.cs",
+      "bytes": 5562,
+      "sha256": "C18F42FADE49F5C5E8C395263A6FE0DB151E9C1DE62BB68B7D10068C1F668324"
+    },
+    {
+      "path": "backend/tests/ZelaSP.Tests/TaintPublicationTests.cs",
+      "bytes": 2778,
+      "sha256": "58B492B7ACF47B306C27D95471F042C4B2E619171A198089D1C8B8BD4256D3F4"
+    },
+    {
+      "path": "backend/academico/cybersecurity/evidencias/taint-explicito-20261119/regressao-console.txt",
+      "bytes": 714,
+      "sha256": "99AB75C0A07A6A7756CA2FFE4F278A9A1D3D316647783ADB84B69619E0B23140"
+    },
+    {
+      "path": "backend/academico/cybersecurity/evidencias/taint-explicito-20261119/build-console.txt",
+      "bytes": 1072,
+      "sha256": "E9BCAEB1528C5FCAB5E77BCBC15900C8D3B92D0D1563EC704DDBE213DCB32413"
+    }
+  ]
+}

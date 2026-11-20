@@ -72,6 +72,9 @@ export interface Risk {
   };
   vazamentosBloqueados: number;
   alertas: { tipo: string; texto: string }[];
+  // Optional only for legacy cache/mock records. The real API supplies both.
+  janela?: { inicioUtc: string; fimUtc: string };
+  explicacao?: { texto: string; origem: "LLM" | "FALLBACK" };
 }
 export interface CreateInput {
   bairroId: number;

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import {
@@ -11,31 +11,42 @@ import {
   SkeletonCards,
   s,
 } from "../../src/components/ui";
-import { Connection } from "../../src/components/Connection";
 import { useApp } from "../../src/state/AppContext";
 import { RISK_UNAVAILABLE } from "../../src/services/errors";
 import { dataMode } from "../../src/services/config";
 import { dateTime } from "../../src/utils/validation";
+import { parseCachedRisk } from "../../src/services/contract";
 import { theme as t } from "../../src/theme";
 export default function Risk() {
   const app = useApp(),
     [loading, setLoading] = useState(false),
     [error, setError] = useState("");
-  const risk = app.snapshot.risk;
+  // Cached state is untrusted too; never render its arbitrary fields/text directly.
+  const risk = parseCachedRisk(app.snapshot.risk);
+  const updatedAt = typeof app.snapshot.riskUpdatedAt === "string" &&
+    Number.isFinite(Date.parse(app.snapshot.riskUpdatedAt))
+    ? new Date(app.snapshot.riskUpdatedAt).toISOString() : null;
+  const request = useRef(0);
   async function load() {
+    const ticket = ++request.current;
     setLoading(true);
     setError("");
     try {
+      if (app.offline) throw new Error("offline");
       await app.refreshRisk();
     } catch {
-      setError(RISK_UNAVAILABLE);
+      if (ticket === request.current) setError(RISK_UNAVAILABLE);
     } finally {
-      setLoading(false);
+      if (ticket === request.current) setLoading(false);
     }
   }
   useFocusEffect(
     useCallback(() => {
       void load();
+      return () => {
+        request.current++;
+        app.cancelRisk();
+      };
     }, [app.offline, app.settings.fail, app.settings.emptyRisk]),
   );
   return (
@@ -43,7 +54,7 @@ export default function Risk() {
       title="Risco Cidadão"
       subtitle="Entenda como seus dados são protegidos"
     >
-      <Connection />
+      {app.offline && <Notice text="Sem conexão — o último indicador disponível pode estar desatualizado." />}
       {dataMode === "mock" && (
         <Txt muted size={12}>
           Demonstração com eventos de teste. Os indicadores são recalculados a
@@ -52,7 +63,7 @@ export default function Risk() {
       )}
       {!!error && <Notice text={error} tone="error" />}
       {!!error && !!risk && (
-        <Notice text="Exibindo o último resultado salvo. Os indicadores podem estar desatualizados." />
+        <Notice text="Exibindo o último resultado validado. Os indicadores podem estar desatualizados." />
       )}
       {loading ? (
         <SkeletonCards />
@@ -111,6 +122,28 @@ export default function Risk() {
             ))}
           </View>
           <Card>
+            <Txt bold>Explicação cidadã</Txt>
+            {risk.explicacao ? (
+              <>
+                <Txt muted size={12}>
+                  {dataMode === "mock"
+                    ? "Origem: fallback de demonstração — sem chamada ao LLM"
+                    : risk.explicacao.origem === "LLM"
+                      ? "Origem: LLM — explicação retornada pela API"
+                      : "Origem: fallback determinístico da API"}
+                </Txt>
+                <Txt>{risk.explicacao.texto}</Txt>
+              </>
+            ) : (
+              <Txt muted>Este registro antigo não contém explicação. Atualize os indicadores.</Txt>
+            )}
+            {risk.janela && (
+              <Txt muted size={12}>
+                Janela UTC: {risk.janela.inicioUtc} até {risk.janela.fimUtc}
+              </Txt>
+            )}
+          </Card>
+          <Card>
             <Txt bold>
               {risk.vazamentosBloqueados} vazamento(s) bloqueado(s)
             </Txt>
@@ -125,9 +158,9 @@ export default function Risk() {
           ) : (
             <Notice text="Nenhuma detecção de dados pessoais nos últimos 7 dias" />
           )}
-          {!!app.snapshot.riskUpdatedAt && (
+          {!!updatedAt && (
             <Txt muted size={12}>
-              Atualizado em {dateTime(app.snapshot.riskUpdatedAt)}
+              Atualizado em {dateTime(updatedAt!)}
             </Txt>
           )}
         </>

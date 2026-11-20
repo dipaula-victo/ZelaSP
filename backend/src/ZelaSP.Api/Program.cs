@@ -5,6 +5,9 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
+if (builder.Environment.IsDevelopment())
+    builder.Services.AddCors(options => options.AddPolicy("ExpoRiskDevelopment", policy =>
+        policy.WithOrigins("http://127.0.0.1:8081").WithMethods("GET")));
 // Framework diagnostics can include request values or provider exceptions. Do not emit
 // these categories until a structured, sanitized diagnostic pipeline is implemented.
 builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.None);
@@ -53,6 +56,16 @@ builder.Services.AddScoped<IoTService>();
 var app = builder.Build();
 app.UseExceptionHandler(new ExceptionHandlerOptions { SuppressDiagnosticsCallback = _ => true });
 app.UseStatusCodePages();
+if (app.Environment.IsDevelopment())
+{
+    app.UseRouting();
+    // Exact path and method: do not enable browser access to other API routes.
+    app.UseWhen(context => string.Equals(context.Request.Path.Value, "/api/risco-cidadao", StringComparison.Ordinal) &&
+        (HttpMethods.IsGet(context.Request.Method) ||
+         (HttpMethods.IsOptions(context.Request.Method) &&
+          string.Equals(context.Request.Headers["Access-Control-Request-Method"].ToString(), "GET", StringComparison.Ordinal))),
+        branch => branch.UseCors("ExpoRiskDevelopment"));
+}
 if (app.Environment.IsDevelopment()) app.MapOpenApi();
 app.MapControllers();
 app.Run();

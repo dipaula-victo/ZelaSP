@@ -70,7 +70,15 @@ Adapter não possui logger nem inclui dados recebidos em mensagens públicas. Lo
 - Não há índice temporal no schema, rate limit ou cache de inferência; volume e custo de GET com IA habilitada precisam de acompanhamento e eventual tarefa própria.
 - A política de retenção/termos do provedor deve ser revisada antes da habilitação real; nenhum dado real deve ser usado como demonstração.
 - A mensagem agregada não é persistida; MENSAGEM_RISCO permanece inalterada (FK obrigatória/única por evento), sem violar sua cardinalidade.
-- A tela Mobile não mostra a explicação nova; seu parser aceita campos adicionais e continua recebendo alertas fixos. Exibição depende do integrante Mobile em tarefa autorizada.
+- A tela Mobile passou a renderizar explicação e origem LLM/FALLBACK, validando contrato e cache. Reconstrói apenas campos permitidos e rejeita PII reconhecida ou saída inadequada. Testes isolados não comprovam execução em Expo/dispositivo ou inferência externa; ver [fluxo e validação atual](CYBERSECURITY_FLUXO_E_VALIDACAO.md).
+
+## Barreiras reais e simulação Mobile
+
+No backend, o source é `CriarOcorrenciaRequest.Descricao`. `ProtecaoPii.Analisar` transforma o texto antes da persistência e fornece categorias para auditoria. Leituras protegem descrições legadas sem regravar dados. O sink externo recebe exclusivamente `ResumoRiscoAi`, reconstruído de agregados permitidos: nem relato original nem mascarado entram no payload. A saída LLM é um novo source não confiável, validado ou substituído por fallback.
+
+No Mobile, `fetchRisk` consulta somente GET /api/risco-cidadao. `parseRisk` exige janela/explicação para a API, verifica pontos/alertas e projeta apenas campos conhecidos. `AppContext` armazena essa projeção e valida o risco restaurado do cache; a tela repete a validação antes de renderizar. Erros públicos são constantes. Isso não constitui detecção universal de PII: a principal barreira externa continua sendo o contrato fechado de agregados.
+
+Os logs `[TAINT]` e eventos `VAZAMENTO_BLOQUEADO` de `mobile/src/services/mock-engine.ts` pertencem ao simulador. Headers `X-Rastrear-Fluxo`, `X-Simular-Log-Inseguro` e `X-Simular-Falha` não implementam esse comportamento no backend. O backend produz PII_DETECTADO/MASCARADO, mas não um evento de tentativa bloqueada em sink inseguro. Não atribuir eventos simulados ao SQL Server. Demonstrar um sink real bloqueado e sua auditoria exige cenário aprovado; não se adicionou endpoint de falha ou log inseguro nesta etapa.
 
 ## Referência do protocolo
 

@@ -12,6 +12,8 @@ import { dataMode, testMode } from "../services/config";
 import * as api from "../services/gateway";
 import { retainPhoto } from "../services/photos";
 import { ServiceError } from "../services/errors";
+import { createRiskCoordinator, restoreRiskCache } from "../services/risk-state";
+import { parseCachedRisk } from "../services/contract";
 import {
   defaults,
   emptySnapshot,
@@ -38,8 +40,10 @@ function useStore() {
     network = useRef(false),
     lock = useRef(false),
     pending = useRef(Promise.resolve());
+  const riskCoordinator = useRef(createRiskCoordinator());
   const persist = useCallback(async (patch: Partial<Snapshot>) => {
-    const next = { ...saved.current, ...patch };
+    const merged = { ...saved.current, ...patch };
+    const next = { ...merged, risk: parseCachedRisk(merged.risk) };
     saved.current = next;
     setSnapshot(next);
     const task = pending.current.catch(() => {}).then(() => write(key, next));
@@ -94,7 +98,7 @@ function useStore() {
     (async () => {
       try {
         const [cache, options] = await Promise.all([
-          read(key, emptySnapshot),
+          restoreRiskCache(() => read(key, emptySnapshot), value => write(key, value)),
           read("zelasp-v3:settings", defaults),
         ]);
         if (!active) return;
@@ -106,11 +110,12 @@ function useStore() {
         await refresh();
       } catch (e) {
         if (active)
-          setFatal(e instanceof Error ? e.message : "Falha ao abrir o banco.");
+          setFatal("Falha ao abrir ou proteger o armazenamento local.");
       }
     })();
     return () => {
       active = false;
+      riskCoordinator.current.invalidate();
     };
   }, [refresh]);
   async function mutate<T>(work: () => Promise<T>) {
@@ -142,6 +147,7 @@ function useStore() {
     refresh,
     setSettings: async (value: Settings) => {
       await write("zelasp-v3:settings", value);
+      riskCoordinator.current.invalidate();
       config.current = value;
       setConfig(value);
       await refresh();
@@ -214,12 +220,14 @@ function useStore() {
         await persist({ photos: { ...saved.current.photos, [id]: photo } });
       return photo;
     },
-    refreshRisk: async () => {
-      const risk = await api.getRisk(flags());
-      await persist({ risk, riskUpdatedAt: new Date().toISOString() });
-      return risk;
-    },
+    cancelRisk: () => riskCoordinator.current.invalidate(),
+    refreshRisk: () => riskCoordinator.current.refresh(
+      () => `${dataMode}:${JSON.stringify(flags())}`,
+      () => api.getRisk(flags()),
+      risk => persist({ risk, riskUpdatedAt: new Date().toISOString() }),
+    ),
     reset: async () => {
+      riskCoordinator.current.invalidate();
       await api.resetMock();
       await persist(emptySnapshot);
       await refresh();

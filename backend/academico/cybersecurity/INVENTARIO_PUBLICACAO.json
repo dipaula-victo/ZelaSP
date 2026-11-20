@@ -1,0 +1,255 @@
+{
+  "scope": "Exact prepared Cybersecurity selection in separate worktree, not staging or whole repository; relative paths from worktree root",
+  "branch": "feature/cybersecurity-academic-delivery",
+  "baseHead": "8b3a0262d302a33861b7ad5c977e9ee941f13538",
+  "excludesSelf": true,
+  "excluded": [
+    "backend/academico/csharp/",
+    "backend/academico/soa/ changes",
+    "backend/VALIDACAO.md changes",
+    "backend/prompts.md changes",
+    "backend/src/ZelaSP.Api/ApiExceptionHandler.cs",
+    "backend/tests/E05ProcessHost/",
+    "backend/docs/revisoes/CYBERSECURITY_ALTERACOES.patch",
+    "node_modules/",
+    "bin/",
+    "obj/",
+    ".expo/",
+    ".artifacts/",
+    "dist-cyber-*/"
+  ],
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 3392,
+      "sha256": "281223FC59C9BD32FE0CDF38A6ED04400D126B00FA08835849E58C82E0CBF205"
+    },
+    {
+      "path": "backend/academico/cybersecurity/CONFORMIDADE.md",
+      "bytes": 5543,
+      "sha256": "3BA445A0B0C2B11535B5DDBCC083B3F85CA1286D0EACAE1642D857BE11FDE73E"
+    },
+    {
+      "path": "backend/academico/cybersecurity/MATRIZ_REQUISITOS.md",
+      "bytes": 2472,
+      "sha256": "CF27BE2FD01CA1289C555DB1DC9F0A6ADE0001BBF2D8DE3D880578CB55D9B402"
+    },
+    {
+      "path": "backend/academico/cybersecurity/PLANO_VALIDACAO_LLM.md",
+      "bytes": 4973,
+      "sha256": "040268AC0D079EF48E3DC43D61580BCEF4602355267E54DFAEEBCF8109B4174A"
+    },
+    {
+      "path": "backend/academico/cybersecurity/README.md",
+      "bytes": 6344,
+      "sha256": "915F92F4AEA35A4807773AE18803CB627EA027F0E82496B031CFBC00BCBECC91"
+    },
+    {
+      "path": "backend/academico/cybersecurity/docs/RELATORIO_CYBERSECURITY_ZELASP.html",
+      "bytes": 84782,
+      "sha256": "08DC1D7F380F9574BC5731A566F8BCDAE4071A695C8220EB381C0250A74218A1"
+    },
+    {
+      "path": "backend/academico/cybersecurity/docs/RELATORIO_CYBERSECURITY_ZELASP.pdf",
+      "bytes": 289125,
+      "sha256": "8388E47B234FDC945402A9F2A9C9E217541ECCCBEA9B938A33B75E6A46EA8B9A"
+    },
+    {
+      "path": "backend/academico/cybersecurity/evidencias/INDICE.md",
+      "bytes": 2741,
+      "sha256": "6EDD2F72B3700CB13762FA6F790B8BB1428BDA376A7195E1A3F7FD13B77702B5"
+    },
+    {
+      "path": "backend/academico/cybersecurity/evidencias/integracao-real-5188-20261119/INTEGRIDADE.json",
+      "bytes": 909,
+      "sha256": "5AEC92994FE1952EE2E4433634CEDB427EC2EA8E8EBF25411D90270A4B1C9BC4"
+    },
+    {
+      "path": "backend/academico/cybersecurity/evidencias/integracao-real-5188-20261119/README.md",
+      "bytes": 3682,
+      "sha256": "E7BAF7CFB3CD85F96F9CA0DD5E7A6A17F7DAA777C200D1FA72BE41D963A82D58"
+    },
+    {
+      "path": "backend/academico/cybersecurity/evidencias/integracao-real-5188-20261119/dashboard.png",
+      "bytes": 38764,
+      "sha256": "927E0F3E10305242C17D2298EED29413F17B3931F79A1C4221D9C7B8054F02EE"
+    },
+    {
+      "path": "backend/academico/cybersecurity/evidencias/integracao-real-5188-20261119/response.json",
+      "bytes": 550,
+      "sha256": "1DFC2596A97CDB17396FE90BFB7DA98F54B85B8443619E865AF4E2CE9207978B"
+    },
+    {
+      "path": "backend/academico/cybersecurity/evidencias/taint-barreiras-20261119/README.md",
+      "bytes": 7276,
+      "sha256": "D9572B1CC2D4EF07052D34D99B1A560D41ED11A57541BCFA3FD685329455358A"
+    },
+    {
+      "path": "backend/academico/cybersecurity/evidencias/taint-barreiras-20261119/regressao-console.txt",
+      "bytes": 698,
+      "sha256": "BBA5AFF5C722E37AAFFFB8B90C68DE99ECB0311CDA907E558623A8BEE3258BF1"
+    },
+    {
+      "path": "backend/academico/cybersecurity/evidencias/taint-explicito-20261119/INTEGRIDADE.json",
+      "bytes": 1359,
+      "sha256": "45ED55A34EBB0E6CED89094DA034FDD0723916B3369154BBC2A91667AB6FA10E"
+    },
+    {
+      "path": "backend/academico/cybersecurity/evidencias/taint-explicito-20261119/README.md",
+      "bytes": 8493,
+      "sha256": "060B3BCCAF0A5DCD68AE1055372274A9A89E1B5A699A1C0E8FD3E29A0F5AB1E1"
+    },
+    {
+      "path": "backend/academico/cybersecurity/evidencias/taint-explicito-20261119/build-console.txt",
+      "bytes": 1072,
+      "sha256": "E9BCAEB1528C5FCAB5E77BCBC15900C8D3B92D0D1563EC704DDBE213DCB32413"
+    },
+    {
+      "path": "backend/academico/cybersecurity/evidencias/taint-explicito-20261119/regressao-console.txt",
+      "bytes": 714,
+      "sha256": "99AB75C0A07A6A7756CA2FFE4F278A9A1D3D316647783ADB84B69619E0B23140"
+    },
+    {
+      "path": "backend/docs/CYBERSECURITY_FLUXO_E_VALIDACAO.md",
+      "bytes": 8355,
+      "sha256": "1D6E288ECF402FB44DC3AFBA1F940EC83AD0D33F23C8B33F722747EA4E2A1446"
+    },
+    {
+      "path": "backend/docs/TAINT_ANALYSIS.md",
+      "bytes": 9778,
+      "sha256": "968C94E355D211DB7AFC9FCF84FBB0F5842A08E3B8F48D512DAC986584EDD1AF"
+    },
+    {
+      "path": "backend/docs/revisoes/CYBERSECURITY_CODE_REVIEW.md",
+      "bytes": 9599,
+      "sha256": "CDE2DFF7894C3772E0465E2B185B645B972F1BBDB897D6E03D7D7DDDC8107A6F"
+    },
+    {
+      "path": "backend/docs/revisoes/CYBERSECURITY_CORRECOES_P1.md",
+      "bytes": 6332,
+      "sha256": "CEADFDBB4C6CE5E99975FFBD8D4E657A804D21E2A8C3482A1CD85140CC356F33"
+    },
+    {
+      "path": "backend/docs/revisoes/CYBERSECURITY_CORS_DEVELOPMENT.md",
+      "bytes": 4783,
+      "sha256": "9C458CA0EAAC96A62C4AF3F324EC720FCD79B894A6E6DB28FFE968C87E094D9C"
+    },
+    {
+      "path": "backend/docs/revisoes/CYBERSECURITY_INTEGRACAO_REAL_5188.md",
+      "bytes": 8274,
+      "sha256": "A69AFC52A90EED1285E4AF167C7076F630CC07DA8C3B0EB9BDF8E59610BB4A22"
+    },
+    {
+      "path": "backend/docs/revisoes/CYBERSECURITY_VALIDACAO_EXPO_WEB.md",
+      "bytes": 6905,
+      "sha256": "1055863CB1148C1842E9A2493394E02BB92FBCF8F7FD3E07A877DFE36394C6C7"
+    },
+    {
+      "path": "backend/src/ZelaSP.Api/Program.cs",
+      "bytes": 4161,
+      "sha256": "AEF8E4BBD4E07D41DE234AD4AF30E951270493E38A0F1AAA49BC969B3C83BB8A"
+    },
+    {
+      "path": "backend/src/ZelaSP.Application/RiscoCidadaoService.cs",
+      "bytes": 3085,
+      "sha256": "01B0A8D5850F4B39C53A0E548C98744778A74C6180417873CA531D556E07E49E"
+    },
+    {
+      "path": "backend/src/ZelaSP.Application/TextoClassificado.cs",
+      "bytes": 3123,
+      "sha256": "F9B4FBAB67AF2903A9132B87123BA6F594596B3F7014FFAD9C8CF7AF923E692B"
+    },
+    {
+      "path": "backend/tests/ZelaSP.Tests/RiskCorsTests.cs",
+      "bytes": 4275,
+      "sha256": "5851D9446AE697A169D4D408A229C2D18788F6267AB628732DDF90E9057E953B"
+    },
+    {
+      "path": "backend/tests/ZelaSP.Tests/TaintBarrierTests.cs",
+      "bytes": 10090,
+      "sha256": "EF651B7FBD5AD610EA296BEA87E89697C41DDF87BA2C094080776603CDE50A1E"
+    },
+    {
+      "path": "backend/tests/ZelaSP.Tests/TaintPublicationTests.cs",
+      "bytes": 2778,
+      "sha256": "58B492B7ACF47B306C27D95471F042C4B2E619171A198089D1C8B8BD4256D3F4"
+    },
+    {
+      "path": "backend/tests/ZelaSP.Tests/TextoClassificadoTests.cs",
+      "bytes": 5562,
+      "sha256": "C18F42FADE49F5C5E8C395263A6FE0DB151E9C1DE62BB68B7D10068C1F668324"
+    },
+    {
+      "path": "mobile/README.md",
+      "bytes": 9021,
+      "sha256": "B9CEDC3A8178926664FA81EC22D1004518A138EDDD68323297995480E87C14AB"
+    },
+    {
+      "path": "mobile/app/(tabs)/risco.tsx",
+      "bytes": 6588,
+      "sha256": "7A2327B55AACF6150AA06C6786A3BDB854BC3CD2611718E8512FAA5FE63C6F20"
+    },
+    {
+      "path": "mobile/prompts.md",
+      "bytes": 2078,
+      "sha256": "EA75236958890A22893ACFB796171AF31BBC20F2FB812E6721FF0661078CC12D"
+    },
+    {
+      "path": "mobile/src/data/types.ts",
+      "bytes": 2740,
+      "sha256": "7E5842AA06A62CC85C257C11E1004EF8D5DF52EDCDB44C282B3AC3E9801CE4C9"
+    },
+    {
+      "path": "mobile/src/services/contract.ts",
+      "bytes": 7964,
+      "sha256": "A3D117D750FC9AE298C1D7210D44FF8186FB898D8B732C034D3F27D29C70E569"
+    },
+    {
+      "path": "mobile/src/services/gateway.ts",
+      "bytes": 5834,
+      "sha256": "55A9EEC327498B2F34DA4A65DC2BFB5F9C7532D411198230E82A236022C16F68"
+    },
+    {
+      "path": "mobile/src/services/privacy.ts",
+      "bytes": 5013,
+      "sha256": "9AA658A037EB2634DB714C6BED7E8E4C56D1F1CD2F2CD866D490AFAE98173AF4"
+    },
+    {
+      "path": "mobile/src/services/risk-client.ts",
+      "bytes": 870,
+      "sha256": "49DE413FCAB4016411C7B831F6CB93F65884B08B3C5A96A630CDD1920F6BE93F"
+    },
+    {
+      "path": "mobile/src/services/risk-state.ts",
+      "bytes": 2045,
+      "sha256": "5DE3679B8D8A2DB390D18722B08AF2722F57577898E4DFF801D634A313DF562C"
+    },
+    {
+      "path": "mobile/src/state/AppContext.tsx",
+      "bytes": 8100,
+      "sha256": "6773FBFFB414BE263DD54473CDEFFEE05DBE6648FADED5DFEC672815BC2A0D22"
+    },
+    {
+      "path": "mobile/tests/render-guards.test.ts",
+      "bytes": 6729,
+      "sha256": "3C91E467BCED0FD284E1E647BA2BC56AB5461A7AFC62158D42A2EBD7C3B26C93"
+    },
+    {
+      "path": "mobile/tests/risk-api.test.ts",
+      "bytes": 8543,
+      "sha256": "DFA4B9C92DF757B8B412352F6FB4D3953FACA3D7C7A29288D9D6A8D650D68A7D"
+    },
+    {
+      "path": "mobile/tests/risk-state.test.ts",
+      "bytes": 6798,
+      "sha256": "641A4A870004CC7F43A7E35D50825006F12BEB407BB914C820BB4E6D0D489098"
+    },
+    {
+      "path": "mobile/tests/run-cyber-isolated.mjs",
+      "bytes": 856,
+      "sha256": "4F9992C31B676548DF959D9156DD9ABF175CA70E0A22235CF563F661662EB1C1"
+    }
+  ],
+  "sourceBranch": "feature/task-008-academic-deliverables",
+  "sourceBaseHead": "5ba5aa5133e2ac84e21aa38b7ac2ebad5feadaf0"
+}

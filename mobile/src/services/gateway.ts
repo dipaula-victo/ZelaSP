@@ -14,11 +14,11 @@ import {
   parseOccurrence,
   parseLookups,
   parseExecutors,
-  parseRisk,
   testHeaders,
 } from "./contract";
 import { createMockEngine, type MockState } from "./mock-engine";
 import { cachePhoto, retainPhoto } from "./photos";
+import { fetchRisk, mockRiskExplanation } from "./risk-client";
 const mock = createMockEngine({
   read: () => read<MockState | null>("zelasp-v3-mock-server", null),
   write: (value) => write("zelasp-v3-mock-server", value),
@@ -177,8 +177,8 @@ export async function changeStatus(
 export async function getRisk(settings: Settings) {
   await guard(settings);
   return dataMode === "mock"
-    ? mock.risk(settings.emptyRisk)
-    : parseRisk(await request("/api/risco-cidadao"));
+    ? mockRiskExplanation(await mock.risk(settings.emptyRisk))
+    : fetchRisk();
 }
 export async function resetMock() {
   if (dataMode !== "mock")
