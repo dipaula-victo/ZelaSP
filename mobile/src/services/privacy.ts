@@ -45,15 +45,39 @@ export function maskDescription(input: string) {
     detections.push(type);
     return labels[type];
   };
+  // Password spans take priority. Quotes remain to preserve boundaries on replay.
+  const marker = /\bsenha\s*(?::|=|é)\s*/gi;
+  const markers = [...input.matchAll(marker)];
+  let end = 0;
+  text = "";
+  for (let i = 0; i < markers.length; i++) {
+    const match = markers[i];
+    if (match.index! < end) continue;
+    const start = match.index! + match[0].length;
+    const line = input.slice(start).search(/[\r\n\u0085\u2028\u2029]/);
+    const lineEnd = line < 0 ? input.length : start + line;
+    const quote = input[start];
+    const closing = quote === '"' || quote === "'" ? input.indexOf(quote, start + 1) : -1;
+    const quoted = closing > start && closing < lineEnd;
+    let stop = quoted ? closing + 1 : Math.min(markers[i + 1]?.index ?? input.length, lineEnd);
+    if (!quoted) {
+      const delimiter = input.slice(start, stop).search(/[,;]/);
+      if (delimiter >= 0) stop = start + delimiter;
+      while (stop > start && /\s/.test(input[stop - 1])) stop--;
+    }
+    const from = quoted ? start + 1 : start;
+    const to = quoted ? stop - 1 : stop;
+    const value = input.slice(from, to);
+    text += input.slice(end, from);
+    text += value && !Object.values(labels).includes(value) ? replace("SENHA") : value;
+    end = to;
+  }
+  text += input.slice(end);
   text = text.replace(/(?<!\d)\d{3}\.?\d{3}\.?\d{3}-?\d{2}(?!\d)/g, (value) =>
     validCPF(value) ? replace("CPF") : value,
   );
   text = text.replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, () =>
     replace("EMAIL"),
-  );
-  text = text.replace(
-    /(\bsenha\s*(?::|=|é)\s*)(?!\[SENHA OCULTADA\])([^\s,;]+)/gi,
-    (_match, prefix: string) => prefix + replace("SENHA"),
   );
   text = text.replace(
     /(?<![\d\w])(?:\+?55[\s.-]*)?\(?[1-9]\d\)?[\s.-]*(?:9\d{4}|[2-5]\d{3})[\s-]*\d{4}(?!\d)/g,

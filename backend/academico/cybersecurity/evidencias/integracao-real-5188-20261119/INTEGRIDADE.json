@@ -1,0 +1,20 @@
+{
+    "excludesSelf":  true,
+    "scope":  "Copied evidence files only; documentation is not included",
+    "files":  [
+                  {
+                      "path":  "dashboard.png",
+                      "bytes":  38764,
+                      "sha256":  "927E0F3E10305242C17D2298EED29413F17B3931F79A1C4221D9C7B8054F02EE",
+                      "source":  "mobile/.expo/cyber-real-5188-2026-11-20T01-43-58-563Z/dashboard.png",
+                      "verifiedEqual":  true
+                  },
+                  {
+                      "path":  "response.json",
+                      "bytes":  550,
+                      "sha256":  "1DFC2596A97CDB17396FE90BFB7DA98F54B85B8443619E865AF4E2CE9207978B",
+                      "source":  "mobile/.expo/cyber-real-5188-2026-11-20T01-43-58-563Z/response.json",
+                      "verifiedEqual":  true
+                  }
+              ]
+}

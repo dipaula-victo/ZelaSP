@@ -13,6 +13,7 @@ const babel = req("@babel/core");
 // como o React Native Web em desenvolvimento. Não é um teste de layout visual.
 let state: any;
 let params: any = {};
+let mode: "api" | "mock" = "mock";
 function View({ children }: any) {
   for (const child of React.Children.toArray(children)) {
     assert.notEqual(
@@ -74,6 +75,7 @@ function load(file: string, cache = new Map<string, any>()): any {
       };
     if (id.endsWith("/state/AppContext"))
       return { useApp: () => state, useRows: () => state.rows ?? [] };
+    if (id.endsWith("/services/config")) return { dataMode: mode, testMode: mode === "mock" };
     if (id.endsWith("/services/gateway") || id.endsWith("/services/photos"))
       return {};
     if (id.startsWith(".")) {
@@ -156,4 +158,38 @@ test("o verificador reproduz o problema de string vazia do JSX antigo", () => {
       ),
     /Texto direto em View/,
   );
+});
+
+for (const origem of ["LLM", "FALLBACK"] as const) {
+  test(`painel real renderiza explicação da API e origem ${origem}`, () => {
+    mode = "api";
+    state = baseState();
+    state.snapshot.risk = {
+      pontuacao: 0, nivel: "BAIXO", periodoDias: 7,
+      deteccoes: { cpf: 0, telefone: 0, email: 0, senha: 0, saude: 0 },
+      vazamentosBloqueados: 0, alertas: [],
+      janela: { inicioUtc: "2026-11-12T12:00:00Z", fimUtc: "2026-11-19T12:00:00Z" },
+      explicacao: { texto: "Nenhum evento reconhecido no período.", origem },
+    };
+    const Screen = load(path.resolve("app/(tabs)/risco.tsx")).default;
+    const html = renderToStaticMarkup(React.createElement(Screen));
+    assert.match(html, /Nenhum evento reconhecido no período/);
+    assert.match(html, origem === "LLM" ? /Origem: LLM/ : /Origem: fallback determinístico da API/);
+    assert.match(html, /Janela UTC/);
+  });
+}
+
+test("painel não renderiza explicação pessoal de cache adulterado", () => {
+  mode = "api";
+  state = baseState();
+  state.snapshot.risk = {
+    pontuacao: 0, nivel: "BAIXO", periodoDias: 7,
+    deteccoes: { cpf: 0, telefone: 0, email: 0, senha: 0, saude: 0 },
+    vazamentosBloqueados: 0, alertas: [],
+    explicacao: { texto: "senha: SegredoFicticio123", origem: "LLM" },
+  };
+  const Screen = load(path.resolve("app/(tabs)/risco.tsx")).default;
+  const html = renderToStaticMarkup(React.createElement(Screen));
+  assert.doesNotMatch(html, /SegredoFicticio123/);
+  assert.match(html, /Carregue os indicadores/);
 });

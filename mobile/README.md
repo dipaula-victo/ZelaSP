@@ -1,5 +1,29 @@
 # ZelaSP — Aplicativo do cidadão
 
+## Cybersecurity — integração do painel
+
+A tela Risco Cidadão usa `gateway.getRisk()` e, em modo API, o cliente `fetchRisk()` para consultar GET /api/risco-cidadao. Exibe pontuação, nível, contagens, janela UTC e explicação com origem LLM/FALLBACK, mantendo os alertas fixos. Valida resposta e cache, descarta campos livres extras e usa erros genéricos. Em modo mock, identifica o fallback como demonstração sem LLM. Testes simulados não comprovam inferência externa ou execução em dispositivo.
+
+Configuração de exemplo somente para o processo de desenvolvimento, sem credenciais:
+
+```powershell
+$env:EXPO_PUBLIC_DATA_MODE = 'api'
+$env:EXPO_PUBLIC_API_URL = 'http://127.0.0.1:5188'
+$env:EXPO_PUBLIC_TEST_MODE = 'false'
+```
+
+O endereço deve ser acessível pelo cliente: loopback serve para o mesmo computador; no emulador Android padrão, o host pode ser acessado por10.0.2.2; aparelho físico precisa do IP local e de um listener/rede previamente aprovados. Não confundir localhost do aparelho com o computador. Depois de configurar, reiniciar o Expo existente sob controle do responsável para aplicar o bundle; nenhum processo foi iniciado nesta etapa. Não colocar chave OpenAI em EXPO_PUBLIC_*: essas variáveis são públicas no bundle.
+
+Expo Web utiliza CORS restrito a Development, origem http://127.0.0.1:8081 e GET /api/risco-cidadao. A demonstração real usou a API em http://127.0.0.1:5188, sem escrita SQL e com FALLBACK; outras chamadas foram bloqueadas no navegador para isolar o recorte. Não liberar origens curingas ou credenciais cross-origin. Essa prova não resolve os contratos das outras telas.
+
+Validação sem instalar pacotes, em Node24 ou superior, a partir da raiz do repositório:
+
+```powershell
+node .\mobile\tests\run-cyber-isolated.mjs
+```
+
+O runner substitui fetch e testa o core e o cliente/contrato com respostas em memória. Não faz type checking nem renderiza o app. React/Babel/typecheck e testes de renderização precisam das dependências originais. Resultados, falhas e roteiro do vídeo em [Cybersecurity — fluxo e validação](../backend/docs/CYBERSECURITY_FLUXO_E_VALIDACAO.md). Não houve chamada real ao LLM. Os bloqueios TAINT produzidos pelo mock não são eventos do backend SQL Server.
+
 ## Ficha da CitizenTech
 
 | Campo | Definição |

@@ -1,0 +1,22 @@
+{
+  "pontuacao": 0,
+  "nivel": "BAIXO",
+  "periodoDias": 7,
+  "deteccoes": {
+    "cpf": 0,
+    "telefone": 0,
+    "email": 0,
+    "senha": 0,
+    "saude": 0
+  },
+  "vazamentosBloqueados": 0,
+  "alertas": [],
+  "janela": {
+    "inicioUtc": "2026-11-13T01:44:02.679995Z",
+    "fimUtc": "2026-11-20T01:44:02.679995Z"
+  },
+  "explicacao": {
+    "texto": "Nenhum evento reconhecido de exposição de dados foi registrado nos últimos sete dias. O indicador não representa perigo no bairro nem garante ausência de riscos.",
+    "origem": "FALLBACK"
+  }
+}

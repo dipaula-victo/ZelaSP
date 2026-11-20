@@ -1,6 +1,8 @@
 # ZelaSP
 Solução que permite que moradores registrem e acompanhem ocorrências do bairro, como lixeiras cheias e descarte irregular, com foto, histórico de status e monitoramento por sensor (ESP32), além de proteção dos dados pessoais digitados nos relatos.
 
+[Cybersecurity - documentação, relatório PDF e evidências](backend/academico/cybersecurity/README.md): PII, taint explícito e dashboard com API real/FALLBACK; inferência LLM e vídeo final permanecem pendentes.
+
 ## Mobile Development & IoT — aplicativo do cidadão
 
 [Documentação do app](mobile/README.md): Ficha da CitizenTech, integrantes, instruções para rodar (`npx expo start`), banco de dados (SQLite), origem dos dados (mock), prints das telas e [vídeo de demonstração](https://www.youtube.com/watch?v=sm76ImEubtk). O código está em `mobile/`, feito com React Native, Expo, TypeScript e Expo Router.
